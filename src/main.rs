@@ -1,10 +1,11 @@
+use anyhow::Result;
 use std::env;
 use std::io;
 use std::process;
 mod pattern;
 
 // Usage: echo <input_text> | your_program.sh -E <pattern>
-fn main() {
+fn main() -> Result<()> {
     if env::args().nth(1).unwrap() != "-E" {
         println!("Expected first argument to be '-E'");
         process::exit(1);
@@ -15,7 +16,7 @@ fn main() {
 
     io::stdin().read_line(&mut input_line).unwrap();
 
-    if pattern::match_pattern(&input_line, &pattern) {
+    if pattern::match_pattern(&input_line, &pattern)? {
         process::exit(0)
     } else {
         process::exit(1)
