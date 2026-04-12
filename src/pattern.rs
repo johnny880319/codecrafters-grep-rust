@@ -1,5 +1,3 @@
-use std::vec;
-
 use anyhow::Result;
 
 pub fn match_pattern(input_line: &str, pattern: &str) -> Result<bool> {
@@ -116,8 +114,7 @@ impl PatternToken {
                 (true, index)
             }
             Self::Quantifier { .. } | Self::Alternation(_) => {
-                // This case is handled in the main matching logic
-                (false, index)
+                unreachable!("This should be handled in the recursive matching logic.")
             }
         }
     }
