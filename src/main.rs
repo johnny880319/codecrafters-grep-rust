@@ -1,7 +1,6 @@
 use anyhow::Result;
 use std::env;
-use std::io;
-use std::io::Read;
+use std::io::{self, Read};
 use std::process;
 mod pattern;
 
