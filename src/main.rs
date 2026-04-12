@@ -22,31 +22,41 @@ fn main() -> Result<()> {
         });
 
     // Second argument that is not a flag is file path
-    let file_path = env::args()
-        .skip(1)
-        .find(|arg| !arg.starts_with('-') && *arg != pattern);
+    let mut input_strings = env::args()
+        .filter(|p| !p.starts_with('-'))
+        .skip(2)
+        .map(|s| {
+            let content = std::fs::read_to_string(&s).unwrap_or_else(|_| {
+                eprintln!("Error: Could not read file {s}");
+                process::exit(1);
+            });
+            (s, content)
+        })
+        .collect::<Vec<_>>();
 
-    let mut input_string;
-    if let Some(file_path) = file_path {
-        input_string = std::fs::read_to_string(file_path).unwrap_or_else(|err| {
-            eprintln!("Error reading file: {err}");
-            process::exit(1);
-        });
-    } else {
-        input_string = String::new();
-        io::stdin().read_to_string(&mut input_string).unwrap();
+    if input_strings.is_empty() {
+        input_strings.push((String::new(), {
+            let mut input_string = String::new();
+            io::stdin().read_to_string(&mut input_string).unwrap();
+            input_string
+        }));
     }
 
-    let input_lines = input_string.lines();
+    if input_strings.len() == 1 {
+        input_strings[0].0 = String::new();
+    }
 
     let mut is_any_match = false;
-    for input_line in input_lines {
-        if is_o_flag {
-            is_any_match |= print_result::print_all_results(input_line, &pattern)?;
-        } else if is_color_flag {
-            is_any_match |= print_result::print_colored_results(input_line, &pattern)?;
-        } else {
-            is_any_match |= print_result::print_result(input_line, &pattern)?;
+
+    for (file_name, file_content) in input_strings {
+        for input_line in file_content.lines() {
+            if is_o_flag {
+                is_any_match |= print_result::print_all_results(input_line, &pattern)?;
+            } else if is_color_flag {
+                is_any_match |= print_result::print_colored_results(input_line, &pattern)?;
+            } else {
+                is_any_match |= print_result::print_result(input_line, &pattern, Some(&file_name))?;
+            }
         }
     }
     if !is_any_match {
