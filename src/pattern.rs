@@ -154,19 +154,9 @@ fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
                 i += 1;
             }
             '[' => {
-                let end_idx = pattern[i..]
-                    .find(']')
-                    .ok_or_else(|| anyhow::anyhow!("Unmatched [ in pattern"))?
-                    + i;
-                let group_content = &pattern[i + 1..end_idx];
-                if let Some(inner) = group_content.strip_prefix('^') {
-                    tokens.push(PatternToken::NegatedCharacterGroup(inner.chars().collect()));
-                } else {
-                    tokens.push(PatternToken::CharacterGroup(
-                        group_content.chars().collect(),
-                    ));
-                }
-                i = end_idx + 1;
+                let group_token;
+                (group_token, i) = parse_character_group(i, pattern)?;
+                tokens.push(group_token);
             }
             '^' if i == 0 => {
                 tokens.push(PatternToken::StartAnchor);
@@ -217,6 +207,24 @@ fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
         }
     }
     Ok(tokens)
+}
+
+fn parse_character_group(i: usize, pattern: &str) -> Result<(PatternToken, usize)> {
+    let end_idx = pattern[i..]
+        .find(']')
+        .ok_or_else(|| anyhow::anyhow!("Unmatched [ in pattern"))?
+        + i;
+    let group_content = &pattern[i + 1..end_idx];
+    if let Some(inner) = group_content.strip_prefix('^') {
+        return Ok((
+            PatternToken::NegatedCharacterGroup(inner.chars().collect()),
+            end_idx + 1,
+        ));
+    }
+    Ok((
+        PatternToken::CharacterGroup(group_content.chars().collect()),
+        end_idx + 1,
+    ))
 }
 
 fn parse_alternation(mut left: usize, pattern: &str) -> Result<(PatternToken, usize)> {
