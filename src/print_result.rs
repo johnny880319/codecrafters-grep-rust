@@ -26,9 +26,9 @@ pub fn print_colored_results(input_line: &str, pattern: &str) -> Result<bool> {
     let mut last_end = 0;
     for (start, end) in &matched_idx {
         print!("{}", &input_line[last_end..*start]);
-        print!("\033[01;31m{}\033[m", &input_line[*start..*end]);
+        print!("\x1b[01;31m{}\x1b[m", &input_line[*start..*end]);
         last_end = *end;
     }
-    print!("{}", &input_line[last_end..]);
+    println!("{}", &input_line[last_end..]);
     Ok(true)
 }
