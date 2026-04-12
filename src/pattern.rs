@@ -131,7 +131,6 @@ impl PatternToken {
     }
 }
 
-#[allow(clippy::too_many_lines)]
 fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
     let mut tokens = Vec::new();
     let mut i = 0;
@@ -207,35 +206,9 @@ fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
                 i += 1;
             }
             '(' => {
-                let mut depth = 1;
-                let mut left = i + 1;
-                let mut right = left;
-                let mut alternatives = Vec::new();
-                while right < pattern.len() {
-                    match pattern.as_bytes()[right] as char {
-                        '(' => {
-                            depth += 1;
-                        }
-                        '|' if depth == 1 => {
-                            alternatives.push(parse_pattern(&pattern[left..right])?);
-                            left = right + 1;
-                        }
-                        ')' => {
-                            depth -= 1;
-                            if depth == 0 {
-                                alternatives.push(parse_pattern(&pattern[left..right])?);
-                                break;
-                            }
-                        }
-                        _ => {}
-                    }
-                    right += 1;
-                }
-                if depth != 0 {
-                    return Err(anyhow::anyhow!("Unmatched ( in pattern"));
-                }
-                tokens.push(PatternToken::Alternation(alternatives));
-                i = right + 1;
+                let alternation_token;
+                (alternation_token, i) = parse_alternation(i + 1, pattern)?;
+                tokens.push(alternation_token);
             }
             _ => {
                 tokens.push(PatternToken::Literal(c));
@@ -244,4 +217,34 @@ fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
         }
     }
     Ok(tokens)
+}
+
+fn parse_alternation(mut left: usize, pattern: &str) -> Result<(PatternToken, usize)> {
+    let mut depth = 1;
+    let mut right = left;
+    let mut alternatives = Vec::new();
+    while right < pattern.len() {
+        match pattern.as_bytes()[right] as char {
+            '(' => {
+                depth += 1;
+            }
+            '|' if depth == 1 => {
+                alternatives.push(parse_pattern(&pattern[left..right])?);
+                left = right + 1;
+            }
+            ')' => {
+                depth -= 1;
+                if depth == 0 {
+                    alternatives.push(parse_pattern(&pattern[left..right])?);
+                    break;
+                }
+            }
+            _ => {}
+        }
+        right += 1;
+    }
+    if depth != 0 {
+        return Err(anyhow::anyhow!("Unmatched ( in pattern"));
+    }
+    Ok((PatternToken::Alternation(alternatives), right + 1))
 }
