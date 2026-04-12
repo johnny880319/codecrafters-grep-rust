@@ -12,57 +12,6 @@ pub fn match_pattern(input_line: &str, pattern: &str) -> Result<bool> {
     Ok(false)
 }
 
-fn match_tokens(input_bytes: &[u8], mut index: usize, tokens: &[PatternToken]) -> Result<bool> {
-    if tokens.is_empty() {
-        return Ok(true);
-    }
-
-    let token = &tokens[0];
-    let rest_tokens = &tokens[1..];
-    match token {
-        PatternToken::Quantifier { min, max, inner } => {
-            let mut match_count = 0;
-            let mut positions = vec![index];
-            let mut is_match;
-            while match_count < *max {
-                (is_match, index) = inner.matches(input_bytes, index);
-                if !is_match {
-                    break;
-                }
-                match_count += 1;
-                positions.push(index);
-            }
-            if match_count < *min {
-                return Ok(false);
-            }
-            for count in (*min..=match_count).rev() {
-                let try_idx = positions[count];
-                if match_tokens(input_bytes, try_idx, rest_tokens)? {
-                    return Ok(true);
-                }
-            }
-            Ok(false)
-        }
-        PatternToken::Alternation(alternatives) => {
-            for alt_tokens in alternatives {
-                let mut combined_tokens = alt_tokens.clone();
-                combined_tokens.extend_from_slice(rest_tokens);
-                if match_tokens(input_bytes, index, &combined_tokens)? {
-                    return Ok(true);
-                }
-            }
-            Ok(false)
-        }
-        _ => {
-            let (is_match, index) = token.matches(input_bytes, index);
-            if !is_match {
-                return Ok(false);
-            }
-            match_tokens(input_bytes, index, rest_tokens)
-        }
-    }
-}
-
 #[derive(Clone)]
 enum PatternToken {
     Literal(char),
@@ -250,4 +199,55 @@ fn parse_alternation(pattern: &str, mut start: usize) -> Result<(PatternToken, u
         return Err(anyhow::anyhow!("Unmatched ( in pattern"));
     }
     Ok((PatternToken::Alternation(alternatives), end + 1))
+}
+
+fn match_tokens(input_bytes: &[u8], mut index: usize, tokens: &[PatternToken]) -> Result<bool> {
+    if tokens.is_empty() {
+        return Ok(true);
+    }
+
+    let token = &tokens[0];
+    let rest_tokens = &tokens[1..];
+    match token {
+        PatternToken::Quantifier { min, max, inner } => {
+            let mut match_count = 0;
+            let mut positions = vec![index];
+            let mut is_match;
+            while match_count < *max {
+                (is_match, index) = inner.matches(input_bytes, index);
+                if !is_match {
+                    break;
+                }
+                match_count += 1;
+                positions.push(index);
+            }
+            if match_count < *min {
+                return Ok(false);
+            }
+            for count in (*min..=match_count).rev() {
+                let try_idx = positions[count];
+                if match_tokens(input_bytes, try_idx, rest_tokens)? {
+                    return Ok(true);
+                }
+            }
+            Ok(false)
+        }
+        PatternToken::Alternation(alternatives) => {
+            for alt_tokens in alternatives {
+                let mut combined_tokens = alt_tokens.clone();
+                combined_tokens.extend_from_slice(rest_tokens);
+                if match_tokens(input_bytes, index, &combined_tokens)? {
+                    return Ok(true);
+                }
+            }
+            Ok(false)
+        }
+        _ => {
+            let (is_match, index) = token.matches(input_bytes, index);
+            if !is_match {
+                return Ok(false);
+            }
+            match_tokens(input_bytes, index, rest_tokens)
+        }
+    }
 }
