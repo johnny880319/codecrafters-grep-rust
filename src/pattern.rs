@@ -201,7 +201,7 @@ fn parse_alternation(pattern: &str, mut start: usize) -> Result<(PatternToken, u
     Ok((PatternToken::Alternation(alternatives), end + 1))
 }
 
-fn match_tokens(input_bytes: &[u8], mut index: usize, tokens: &[PatternToken]) -> Result<bool> {
+fn match_tokens(input_bytes: &[u8], index: usize, tokens: &[PatternToken]) -> Result<bool> {
     if tokens.is_empty() {
         return Ok(true);
     }
@@ -212,14 +212,15 @@ fn match_tokens(input_bytes: &[u8], mut index: usize, tokens: &[PatternToken]) -
         PatternToken::Quantifier { min, max, inner } => {
             let mut match_count = 0;
             let mut positions = vec![index];
-            let mut is_match;
+            let mut candidate_index = index;
             while match_count < *max {
-                (is_match, index) = inner.matches(input_bytes, index);
+                let is_match;
+                (is_match, candidate_index) = inner.matches(input_bytes, candidate_index);
                 if !is_match {
                     break;
                 }
                 match_count += 1;
-                positions.push(index);
+                positions.push(candidate_index);
             }
             if match_count < *min {
                 return Ok(false);
