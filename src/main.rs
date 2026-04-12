@@ -30,12 +30,12 @@ fn main() -> Result<()> {
                 eprintln!("Error: Could not read file {s}");
                 process::exit(1);
             });
-            (s, content)
+            (Some(s), content)
         })
         .collect::<Vec<_>>();
 
     if input_strings.is_empty() {
-        input_strings.push((String::new(), {
+        input_strings.push((None, {
             let mut input_string = String::new();
             io::stdin().read_to_string(&mut input_string).unwrap();
             input_string
@@ -43,7 +43,7 @@ fn main() -> Result<()> {
     }
 
     if input_strings.len() == 1 {
-        input_strings[0].0 = String::new();
+        input_strings[0].0 = None;
     }
 
     let mut is_any_match = false;
@@ -55,7 +55,8 @@ fn main() -> Result<()> {
             } else if is_color_flag {
                 is_any_match |= print_result::print_colored_results(input_line, &pattern)?;
             } else {
-                is_any_match |= print_result::print_result(input_line, &pattern, Some(&file_name))?;
+                is_any_match |=
+                    print_result::print_result(input_line, &pattern, file_name.as_deref())?;
             }
         }
     }
