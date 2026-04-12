@@ -6,7 +6,6 @@ pub fn match_pattern(input_line: &str, pattern: &str) -> Result<bool> {
     for start in 0..input_line.len() {
         let (is_match, _) = match_tokens(input_line.as_bytes(), start, &pattern_tokens)?;
         if is_match {
-            println!("{input_line}");
             return Ok(true);
         }
     }

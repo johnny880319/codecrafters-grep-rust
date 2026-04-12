@@ -29,6 +29,7 @@ fn main() -> Result<()> {
             let is_match = pattern::match_pattern(input_line, &pattern)?;
             if is_match {
                 is_any_match = true;
+                println!("{input_line}");
             }
         }
     }
