@@ -1,6 +1,6 @@
 use anyhow::Result;
 use std::env;
-use std::io::{self, Read};
+use std::io::{self, IsTerminal, Read};
 use std::process;
 mod pattern;
 mod print_result;
@@ -8,7 +8,9 @@ mod print_result;
 // Usage: echo <input_text> | your_program.sh -E <pattern>
 fn main() -> Result<()> {
     let is_o_flag = env::args().any(|arg| arg == "-o");
-    let is_color_flag = env::args().any(|arg| arg == "--color=always");
+    let is_color_always = env::args().any(|arg| arg == "--color=always");
+    let is_color_auto = env::args().any(|arg| arg == "--color=auto");
+    let is_color_flag = is_color_always || (is_color_auto && std::io::stdout().is_terminal());
 
     let pattern = env::args().next_back().unwrap();
     let mut input_string = String::new();
