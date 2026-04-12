@@ -150,7 +150,7 @@ fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
             }
             '[' => {
                 let new_token;
-                (new_token, i) = parse_character_group(i, pattern)?;
+                (new_token, i) = parse_character_group(pattern, i + 1)?;
                 tokens.push(new_token);
             }
             '^' if i == 0 => {
@@ -192,7 +192,7 @@ fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
             }
             '(' => {
                 let new_token;
-                (new_token, i) = parse_alternation(i + 1, pattern)?;
+                (new_token, i) = parse_alternation(pattern, i + 1)?;
                 tokens.push(new_token);
             }
             _ => {
@@ -204,50 +204,50 @@ fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
     Ok(tokens)
 }
 
-fn parse_character_group(i: usize, pattern: &str) -> Result<(PatternToken, usize)> {
-    let end_idx = pattern[i..]
+fn parse_character_group(pattern: &str, start: usize) -> Result<(PatternToken, usize)> {
+    let end = pattern[start..]
         .find(']')
         .ok_or_else(|| anyhow::anyhow!("Unmatched [ in pattern"))?
-        + i;
-    let group_content = &pattern[i + 1..end_idx];
+        + start;
+    let group_content = &pattern[start..end];
     if let Some(inner) = group_content.strip_prefix('^') {
         return Ok((
             PatternToken::NegatedCharacterGroup(inner.chars().collect()),
-            end_idx + 1,
+            end + 1,
         ));
     }
     Ok((
         PatternToken::CharacterGroup(group_content.chars().collect()),
-        end_idx + 1,
+        end + 1,
     ))
 }
 
-fn parse_alternation(mut left: usize, pattern: &str) -> Result<(PatternToken, usize)> {
+fn parse_alternation(pattern: &str, mut start: usize) -> Result<(PatternToken, usize)> {
     let mut depth = 1;
-    let mut right = left;
+    let mut end = start;
     let mut alternatives = Vec::new();
-    while right < pattern.len() {
-        match pattern.as_bytes()[right] as char {
+    while end < pattern.len() {
+        match pattern.as_bytes()[end] as char {
             '(' => {
                 depth += 1;
             }
             '|' if depth == 1 => {
-                alternatives.push(parse_pattern(&pattern[left..right])?);
-                left = right + 1;
+                alternatives.push(parse_pattern(&pattern[start..end])?);
+                start = end + 1;
             }
             ')' => {
                 depth -= 1;
                 if depth == 0 {
-                    alternatives.push(parse_pattern(&pattern[left..right])?);
+                    alternatives.push(parse_pattern(&pattern[start..end])?);
                     break;
                 }
             }
             _ => {}
         }
-        right += 1;
+        end += 1;
     }
     if depth != 0 {
         return Err(anyhow::anyhow!("Unmatched ( in pattern"));
     }
-    Ok((PatternToken::Alternation(alternatives), right + 1))
+    Ok((PatternToken::Alternation(alternatives), end + 1))
 }
