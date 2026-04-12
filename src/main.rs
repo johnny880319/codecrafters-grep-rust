@@ -1,6 +1,7 @@
 use anyhow::Result;
 use std::env;
 use std::io;
+use std::io::Read;
 use std::process;
 mod pattern;
 
@@ -14,7 +15,7 @@ fn main() -> Result<()> {
     let pattern = env::args().nth(2).unwrap();
     let mut input_string = String::new();
 
-    io::stdin().read_line(&mut input_string).unwrap();
+    io::stdin().read_to_string(&mut input_string).unwrap();
 
     let input_lines = input_string.lines().collect::<Vec<&str>>();
     let mut is_match = false;
