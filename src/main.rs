@@ -27,5 +27,5 @@ fn main() -> Result<()> {
     if !is_match {
         process::exit(1);
     }
-    process::exit(0);
+    process::exit(0)
 }
