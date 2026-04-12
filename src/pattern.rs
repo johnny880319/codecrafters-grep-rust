@@ -174,7 +174,7 @@ fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
                     ));
                 }
                 let prev_token = tokens.pop().unwrap();
-                let new_token = match c {
+                new_token = match c {
                     '+' => PatternToken::Quantifier {
                         min: 1,
                         max: usize::MAX,
