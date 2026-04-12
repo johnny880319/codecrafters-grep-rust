@@ -1,25 +1,33 @@
 use anyhow::Result;
 
-pub fn match_pattern(input_line: &str, pattern: &str, only_matching: bool) -> Result<bool> {
+pub fn match_pattern(input_line: &str, pattern: &str) -> Result<bool> {
     let pattern_tokens = parse_pattern(pattern)?;
-    let mut is_any_match = false;
+
+    for start in 0..input_line.len() {
+        let (is_match, _) = match_tokens(input_line.as_bytes(), start, &pattern_tokens)?;
+        if is_match {
+            println!("{input_line}");
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+pub fn match_all_patterns(input_line: &str, pattern: &str) -> Result<Vec<String>> {
+    let pattern_tokens = parse_pattern(pattern)?;
     let mut start = 0;
+    let mut matched_strings = Vec::new();
 
     while start <= input_line.len() {
         let (is_match, end) = match_tokens(input_line.as_bytes(), start, &pattern_tokens)?;
         if is_match {
-            if !only_matching {
-                println!("{input_line}");
-                return Ok(true);
-            }
-            is_any_match = true;
-            println!("{}", &input_line[start..end]);
+            matched_strings.push(input_line[start..end].to_string());
             start = end; // Move past the matched portion for the next search
             continue;
         }
         start += 1;
     }
-    Ok(is_any_match)
+    Ok(matched_strings)
 }
 
 #[derive(Clone)]
