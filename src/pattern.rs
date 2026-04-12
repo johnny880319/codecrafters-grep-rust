@@ -91,43 +91,17 @@ enum PatternToken {
 impl PatternToken {
     fn matches(&self, input_bytes: &[u8], index: usize) -> (bool, usize) {
         match self {
-            Self::Literal(c) => {
-                if index >= input_bytes.len() || input_bytes[index] as char != *c {
-                    return (false, index);
-                }
-                (true, index + 1)
-            }
-            Self::Digit => {
-                if index >= input_bytes.len() || !input_bytes[index].is_ascii_digit() {
-                    return (false, index);
-                }
-                (true, index + 1)
-            }
-            Self::WordChar => {
-                if index >= input_bytes.len()
-                    || (!input_bytes[index].is_ascii_alphanumeric() && input_bytes[index] != b'_')
-                {
-                    return (false, index);
-                }
-                (true, index + 1)
-            }
-            Self::Wildcard => {
-                if index >= input_bytes.len() {
-                    return (false, index);
-                }
-                (true, index + 1)
-            }
+            Self::Literal(c) => Self::match_single_char(input_bytes, index, |b| b as char == *c),
+            Self::Digit => Self::match_single_char(input_bytes, index, |b| b.is_ascii_digit()),
+            Self::WordChar => Self::match_single_char(input_bytes, index, |b| {
+                b.is_ascii_alphanumeric() || b == b'_'
+            }),
+            Self::Wildcard => Self::match_single_char(input_bytes, index, |_| true),
             Self::CharacterGroup(chars) => {
-                if index >= input_bytes.len() || !chars.contains(&(input_bytes[index] as char)) {
-                    return (false, index);
-                }
-                (true, index + 1)
+                Self::match_single_char(input_bytes, index, |b| chars.contains(&(b as char)))
             }
             Self::NegatedCharacterGroup(chars) => {
-                if index >= input_bytes.len() || chars.contains(&(input_bytes[index] as char)) {
-                    return (false, index);
-                }
-                (true, index + 1)
+                Self::match_single_char(input_bytes, index, |b| !chars.contains(&(b as char)))
             }
             Self::StartAnchor => {
                 if index != 0 {
@@ -146,6 +120,17 @@ impl PatternToken {
                 (false, index)
             }
         }
+    }
+
+    fn match_single_char(
+        input_bytes: &[u8],
+        index: usize,
+        predict_func: impl Fn(u8) -> bool,
+    ) -> (bool, usize) {
+        if index >= input_bytes.len() || !predict_func(input_bytes[index]) {
+            return (false, index);
+        }
+        (true, index + 1)
     }
 }
 
