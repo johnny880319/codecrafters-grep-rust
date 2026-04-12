@@ -133,6 +133,7 @@ impl PatternToken {
 
 fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
     let mut tokens = Vec::new();
+    let mut new_token;
     let mut i = 0;
     while i < pattern.len() {
         let c = pattern.as_bytes()[i] as char;
@@ -154,9 +155,8 @@ fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
                 i += 1;
             }
             '[' => {
-                let group_token;
-                (group_token, i) = parse_character_group(i, pattern)?;
-                tokens.push(group_token);
+                (new_token, i) = parse_character_group(i, pattern)?;
+                tokens.push(new_token);
             }
             '^' if i == 0 => {
                 tokens.push(PatternToken::StartAnchor);
@@ -196,9 +196,8 @@ fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
                 i += 1;
             }
             '(' => {
-                let alternation_token;
-                (alternation_token, i) = parse_alternation(i + 1, pattern)?;
-                tokens.push(alternation_token);
+                (new_token, i) = parse_alternation(i + 1, pattern)?;
+                tokens.push(new_token);
             }
             _ => {
                 tokens.push(PatternToken::Literal(c));
