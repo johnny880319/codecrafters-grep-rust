@@ -30,7 +30,7 @@ fn match_tokens_recursive(
         let mut positions = vec![start];
         let mut next_idx = start;
         let mut is_match;
-        while match_count <= *max {
+        while match_count < *max {
             (is_match, next_idx) = inner.matches(input_bytes, next_idx);
             if !is_match {
                 break;
