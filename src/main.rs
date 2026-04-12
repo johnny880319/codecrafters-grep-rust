@@ -16,7 +16,7 @@ fn main() -> Result<()> {
 
     io::stdin().read_to_string(&mut input_string).unwrap();
 
-    let input_lines = input_string.lines().collect::<Vec<&str>>();
+    let input_lines = input_string.lines();
     let mut is_match = false;
     for input_line in input_lines {
         if pattern::match_pattern(input_line, &pattern)? {
