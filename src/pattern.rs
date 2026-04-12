@@ -48,6 +48,15 @@ fn match_tokens_recursive(
             }
         }
         Ok(false)
+    } else if let PatternToken::Alternation(alternatives) = token {
+        for alt_tokens in alternatives {
+            let mut combined_tokens = alt_tokens.clone();
+            combined_tokens.extend_from_slice(rest_tokens);
+            if match_tokens_recursive(input_bytes, start, &combined_tokens)? {
+                return Ok(true);
+            }
+        }
+        Ok(false)
     } else {
         let (is_match, next_idx) = token.matches(input_bytes, start);
         if !is_match {
@@ -57,6 +66,7 @@ fn match_tokens_recursive(
     }
 }
 
+#[derive(Clone)]
 enum PatternToken {
     Literal(char),
     Digit,
@@ -71,6 +81,7 @@ enum PatternToken {
         max: usize,
         inner: Box<Self>,
     },
+    Alternation(Vec<Vec<Self>>),
 }
 
 impl PatternToken {
@@ -126,7 +137,7 @@ impl PatternToken {
                 }
                 (true, index)
             }
-            Self::Quantifier { .. } => {
+            Self::Quantifier { .. } | Self::Alternation(_) => {
                 // This case is handled in the main matching logic
                 (false, index)
             }
@@ -134,6 +145,7 @@ impl PatternToken {
     }
 }
 
+#[allow(clippy::too_many_lines)]
 fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
     let mut tokens = Vec::new();
     let mut i = 0;
@@ -207,6 +219,33 @@ fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
                 };
                 tokens.push(new_token);
                 i += 1;
+            }
+            '(' => {
+                let mut depth = 1;
+                let mut left = i + 1;
+                let mut right = left;
+                while right < pattern.len() {
+                    if pattern.as_bytes()[right] as char == '(' {
+                        depth += 1;
+                    } else if pattern.as_bytes()[right] as char == '|' && depth == 1 {
+                        let group_content = &pattern[left..right];
+                        let group_tokens = parse_pattern(group_content)?;
+                        tokens.push(PatternToken::Alternation(vec![group_tokens]));
+                        left = right + 1;
+                    } else if pattern.as_bytes()[right] as char == ')' {
+                        depth -= 1;
+                        if depth == 0 {
+                            let group_content = &pattern[left..right];
+                            let group_tokens = parse_pattern(group_content)?;
+                            tokens.push(PatternToken::Alternation(vec![group_tokens]));
+                            break;
+                        }
+                    }
+                    right += 1;
+                }
+                if depth != 0 {
+                    return Err(anyhow::anyhow!("Unmatched ( in pattern"));
+                }
             }
             _ => {
                 tokens.push(PatternToken::Literal(c));
