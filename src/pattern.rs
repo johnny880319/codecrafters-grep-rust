@@ -224,20 +224,17 @@ fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
                 let mut depth = 1;
                 let mut left = i + 1;
                 let mut right = left;
+                let mut alternatives = Vec::new();
                 while right < pattern.len() {
                     if pattern.as_bytes()[right] as char == '(' {
                         depth += 1;
                     } else if pattern.as_bytes()[right] as char == '|' && depth == 1 {
-                        let group_content = &pattern[left..right];
-                        let group_tokens = parse_pattern(group_content)?;
-                        tokens.push(PatternToken::Alternation(vec![group_tokens]));
+                        alternatives.push(parse_pattern(&pattern[left..right])?);
                         left = right + 1;
                     } else if pattern.as_bytes()[right] as char == ')' {
                         depth -= 1;
                         if depth == 0 {
-                            let group_content = &pattern[left..right];
-                            let group_tokens = parse_pattern(group_content)?;
-                            tokens.push(PatternToken::Alternation(vec![group_tokens]));
+                            alternatives.push(parse_pattern(&pattern[left..right])?);
                             break;
                         }
                     }
@@ -246,6 +243,8 @@ fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
                 if depth != 0 {
                     return Err(anyhow::anyhow!("Unmatched ( in pattern"));
                 }
+                tokens.push(PatternToken::Alternation(alternatives));
+                i = right + 1;
             }
             _ => {
                 tokens.push(PatternToken::Literal(c));
