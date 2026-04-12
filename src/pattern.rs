@@ -230,17 +230,22 @@ fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
                 let mut right = left;
                 let mut alternatives = Vec::new();
                 while right < pattern.len() {
-                    if pattern.as_bytes()[right] as char == '(' {
-                        depth += 1;
-                    } else if pattern.as_bytes()[right] as char == '|' && depth == 1 {
-                        alternatives.push(parse_pattern(&pattern[left..right])?);
-                        left = right + 1;
-                    } else if pattern.as_bytes()[right] as char == ')' {
-                        depth -= 1;
-                        if depth == 0 {
-                            alternatives.push(parse_pattern(&pattern[left..right])?);
-                            break;
+                    match pattern.as_bytes()[right] as char {
+                        '(' => {
+                            depth += 1;
                         }
+                        '|' if depth == 1 => {
+                            alternatives.push(parse_pattern(&pattern[left..right])?);
+                            left = right + 1;
+                        }
+                        ')' => {
+                            depth -= 1;
+                            if depth == 0 {
+                                alternatives.push(parse_pattern(&pattern[left..right])?);
+                                break;
+                            }
+                        }
+                        _ => {}
                     }
                     right += 1;
                 }
