@@ -16,15 +16,7 @@ fn main() -> Result<()> {
     let input_lines = input_string.lines();
     let mut is_any_match = false;
     for input_line in input_lines {
-        let (is_match, start, end) = pattern::match_pattern(input_line, &pattern)?;
-        if is_match {
-            if is_o_flag {
-                println!("{}", &input_line[start..end]);
-            } else {
-                println!("{input_line}");
-            }
-            is_any_match = true;
-        }
+        is_any_match |= pattern::match_pattern(input_line, &pattern, is_o_flag)?;
     }
     if !is_any_match {
         process::exit(1);

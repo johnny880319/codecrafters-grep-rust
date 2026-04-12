@@ -1,15 +1,25 @@
 use anyhow::Result;
 
-pub fn match_pattern(input_line: &str, pattern: &str) -> Result<(bool, usize, usize)> {
+pub fn match_pattern(input_line: &str, pattern: &str, only_matching: bool) -> Result<bool> {
     let pattern_tokens = parse_pattern(pattern)?;
+    let mut is_any_match = false;
+    let mut start = 0;
 
-    for start in 0..input_line.len() {
+    while start <= input_line.len() {
         let (is_match, end) = match_tokens(input_line.as_bytes(), start, &pattern_tokens)?;
         if is_match {
-            return Ok((true, start, end));
+            if !only_matching {
+                println!("{input_line}");
+                return Ok(true);
+            }
+            is_any_match = true;
+            println!("{}", &input_line[start..end]);
+            start = end; // Move past the matched portion for the next search
+            continue;
         }
+        start += 1;
     }
-    Ok((false, 0, 0))
+    Ok(is_any_match)
 }
 
 #[derive(Clone)]
