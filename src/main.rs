@@ -1,12 +1,16 @@
 use anyhow::Result;
 use std::env;
-use std::io::{self, Read};
+use std::io::{self, IsTerminal, Read};
 use std::process;
 mod pattern;
+mod print_result;
 
 // Usage: echo <input_text> | your_program.sh -E <pattern>
 fn main() -> Result<()> {
     let is_o_flag = env::args().any(|arg| arg == "-o");
+    let is_color_always = env::args().any(|arg| arg == "--color=always");
+    let is_color_auto = env::args().any(|arg| arg == "--color=auto");
+    let is_color_flag = is_color_always || (is_color_auto && std::io::stdout().is_terminal());
 
     let pattern = env::args().next_back().unwrap();
     let mut input_string = String::new();
@@ -18,19 +22,11 @@ fn main() -> Result<()> {
     let mut is_any_match = false;
     for input_line in input_lines {
         if is_o_flag {
-            let matched_strings = pattern::match_all_patterns(input_line, &pattern)?;
-            if !matched_strings.is_empty() {
-                is_any_match = true;
-                for matched in matched_strings {
-                    println!("{matched}");
-                }
-            }
+            is_any_match |= print_result::print_all_results(input_line, &pattern)?;
+        } else if is_color_flag {
+            is_any_match |= print_result::print_colored_results(input_line, &pattern)?;
         } else {
-            let is_match = pattern::match_pattern(input_line, &pattern)?;
-            if is_match {
-                is_any_match = true;
-                println!("{input_line}");
-            }
+            is_any_match |= print_result::print_result(input_line, &pattern)?;
         }
     }
     if !is_any_match {

@@ -12,21 +12,21 @@ pub fn match_pattern(input_line: &str, pattern: &str) -> Result<bool> {
     Ok(false)
 }
 
-pub fn match_all_patterns(input_line: &str, pattern: &str) -> Result<Vec<String>> {
+pub fn match_all_patterns(input_line: &str, pattern: &str) -> Result<Vec<(usize, usize)>> {
     let pattern_tokens = parse_pattern(pattern)?;
     let mut start = 0;
-    let mut matched_strings = Vec::new();
+    let mut matched_idx = Vec::new();
 
     while start <= input_line.len() {
         let (is_match, end) = match_tokens(input_line.as_bytes(), start, &pattern_tokens)?;
         if is_match {
-            matched_strings.push(input_line[start..end].to_string());
+            matched_idx.push((start, end));
             start = end; // Move past the matched portion for the next search
             continue;
         }
         start += 1;
     }
-    Ok(matched_strings)
+    Ok(matched_idx)
 }
 
 #[derive(Clone)]
