@@ -25,44 +25,48 @@ fn match_tokens_recursive(
 
     let token = &tokens[0];
     let rest_tokens = &tokens[1..];
-    if let PatternToken::Quantifier { min, max, inner } = token {
-        let mut match_count = 0;
-        let mut positions = vec![start];
-        let mut next_idx = start;
-        let mut is_match;
-        while match_count < *max {
-            (is_match, next_idx) = inner.matches(input_bytes, next_idx);
+    match token {
+        PatternToken::Quantifier { min, max, inner } => {
+            let mut match_count = 0;
+            let mut positions = vec![start];
+            let mut next_idx = start;
+            let mut is_match;
+            while match_count < *max {
+                (is_match, next_idx) = inner.matches(input_bytes, next_idx);
+                if !is_match {
+                    break;
+                }
+                match_count += 1;
+                positions.push(next_idx);
+            }
+            if match_count < *min {
+                return Ok(false);
+            }
+            for count in (*min..=match_count).rev() {
+                let try_idx = positions[count];
+                if match_tokens_recursive(input_bytes, try_idx, rest_tokens)? {
+                    return Ok(true);
+                }
+            }
+            Ok(false)
+        }
+        PatternToken::Alternation(alternatives) => {
+            for alt_tokens in alternatives {
+                let mut combined_tokens = alt_tokens.clone();
+                combined_tokens.extend_from_slice(rest_tokens);
+                if match_tokens_recursive(input_bytes, start, &combined_tokens)? {
+                    return Ok(true);
+                }
+            }
+            Ok(false)
+        }
+        _ => {
+            let (is_match, next_idx) = token.matches(input_bytes, start);
             if !is_match {
-                break;
+                return Ok(false);
             }
-            match_count += 1;
-            positions.push(next_idx);
+            match_tokens_recursive(input_bytes, next_idx, rest_tokens)
         }
-        if match_count < *min {
-            return Ok(false);
-        }
-        for count in (*min..=match_count).rev() {
-            let try_idx = positions[count];
-            if match_tokens_recursive(input_bytes, try_idx, rest_tokens)? {
-                return Ok(true);
-            }
-        }
-        Ok(false)
-    } else if let PatternToken::Alternation(alternatives) = token {
-        for alt_tokens in alternatives {
-            let mut combined_tokens = alt_tokens.clone();
-            combined_tokens.extend_from_slice(rest_tokens);
-            if match_tokens_recursive(input_bytes, start, &combined_tokens)? {
-                return Ok(true);
-            }
-        }
-        Ok(false)
-    } else {
-        let (is_match, next_idx) = token.matches(input_bytes, start);
-        if !is_match {
-            return Ok(false);
-        }
-        match_tokens_recursive(input_bytes, next_idx, rest_tokens)
     }
 }
 
