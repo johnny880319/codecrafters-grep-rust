@@ -3,12 +3,14 @@ use std::vec;
 use anyhow::Result;
 
 pub fn match_pattern(input_line: &str, pattern: &str) -> Result<bool> {
-    let pattern_tokens = parse_pattern(pattern)?;
+    let pattern_tokens = parse_patterns(pattern)?;
 
-    for start in 0..input_line.len() {
-        let is_match = match_tokens_recursive(input_line.as_bytes(), start, &pattern_tokens)?;
-        if is_match {
-            return Ok(true);
+    for tokens in pattern_tokens {
+        for start in 0..input_line.len() {
+            let is_match = match_tokens_recursive(input_line.as_bytes(), start, &tokens)?;
+            if is_match {
+                return Ok(true);
+            }
         }
     }
     Ok(false)
@@ -132,6 +134,13 @@ impl PatternToken {
             }
         }
     }
+}
+
+fn parse_patterns(patterns: &str) -> Result<Vec<Vec<PatternToken>>> {
+    patterns
+        .split('|')
+        .map(parse_pattern)
+        .collect::<Result<Vec<_>>>()
 }
 
 fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
