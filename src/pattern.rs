@@ -1,23 +1,60 @@
+use std::vec;
+
 use anyhow::Result;
 
 pub fn match_pattern(input_line: &str, pattern: &str) -> Result<bool> {
     let pattern_tokens = parse_pattern(pattern)?;
 
     for start in 0..input_line.len() {
-        let mut input_idx = start;
-        let mut is_match = true;
-
-        for pattern_token in &pattern_tokens {
-            (is_match, input_idx) = pattern_token.matches(input_line.as_bytes(), input_idx);
-            if !is_match {
-                break;
-            }
-        }
+        let is_match = match_tokens_recursive(input_line.as_bytes(), start, &pattern_tokens)?;
         if is_match {
             return Ok(true);
         }
     }
     Ok(false)
+}
+
+fn match_tokens_recursive(
+    input_bytes: &[u8],
+    start: usize,
+    tokens: &[PatternToken],
+) -> Result<bool> {
+    if tokens.is_empty() {
+        return Ok(true);
+    }
+
+    let token = &tokens[0];
+    let rest_tokens = &tokens[1..];
+    if let PatternToken::Quantifier { min, max, inner } = token {
+        let mut match_count = 0;
+        let mut positions = vec![start];
+        let mut next_idx = start;
+        let mut is_match;
+        while match_count <= *max {
+            (is_match, next_idx) = inner.matches(input_bytes, next_idx);
+            if !is_match {
+                break;
+            }
+            match_count += 1;
+            positions.push(next_idx);
+        }
+        if match_count < *min {
+            return Ok(false);
+        }
+        for count in (*min..=match_count).rev() {
+            let try_idx = positions[count];
+            if match_tokens_recursive(input_bytes, try_idx, rest_tokens)? {
+                return Ok(true);
+            }
+        }
+        Ok(false)
+    } else {
+        let (is_match, next_idx) = token.matches(input_bytes, start);
+        if !is_match {
+            return Ok(false);
+        }
+        match_tokens_recursive(input_bytes, next_idx, rest_tokens)
+    }
 }
 
 enum PatternToken {
@@ -28,6 +65,11 @@ enum PatternToken {
     NegatedCharacterGroup(Vec<char>),
     StartAnchor,
     EndAnchor,
+    Quantifier {
+        min: usize,
+        max: usize,
+        inner: Box<Self>,
+    },
 }
 
 impl PatternToken {
@@ -77,6 +119,10 @@ impl PatternToken {
                 }
                 (true, index)
             }
+            Self::Quantifier { .. } => {
+                // This case is handled in the main matching logic
+                (false, index)
+            }
         }
     }
 }
@@ -120,6 +166,35 @@ fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
             }
             '$' if i == pattern.len() - 1 => {
                 tokens.push(PatternToken::EndAnchor);
+                i += 1;
+            }
+            '+' | '*' | '?' => {
+                if tokens.is_empty() {
+                    return Err(anyhow::anyhow!(
+                        "Quantifier '{}' cannot be the first token in the pattern",
+                        c
+                    ));
+                }
+                let prev_token = tokens.pop().unwrap();
+                let new_token = match c {
+                    '+' => PatternToken::Quantifier {
+                        min: 1,
+                        max: usize::MAX,
+                        inner: Box::new(prev_token),
+                    },
+                    '*' => PatternToken::Quantifier {
+                        min: 0,
+                        max: usize::MAX,
+                        inner: Box::new(prev_token),
+                    },
+                    '?' => PatternToken::Quantifier {
+                        min: 0,
+                        max: 1,
+                        inner: Box::new(prev_token),
+                    },
+                    _ => unreachable!(),
+                };
+                tokens.push(new_token);
                 i += 1;
             }
             _ => {
