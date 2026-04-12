@@ -12,14 +12,20 @@ fn main() -> Result<()> {
     }
 
     let pattern = env::args().nth(2).unwrap();
-    let mut input_line = String::new();
+    let mut input_string = String::new();
 
-    io::stdin().read_line(&mut input_line).unwrap();
+    io::stdin().read_line(&mut input_string).unwrap();
 
-    if pattern::match_pattern(&input_line, &pattern)? {
-        println!("{input_line}");
-        process::exit(0)
-    } else {
-        process::exit(1)
+    let input_lines = input_string.lines().collect::<Vec<&str>>();
+    let mut is_match = false;
+    for input_line in input_lines {
+        if pattern::match_pattern(input_line, &pattern)? {
+            println!("{input_line}");
+            is_match = true;
+        }
     }
+    if !is_match {
+        process::exit(1);
+    }
+    Ok(())
 }
