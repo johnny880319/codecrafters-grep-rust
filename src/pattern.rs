@@ -61,6 +61,7 @@ enum PatternToken {
     Literal(char),
     Digit,
     WordChar,
+    Wildcard,
     CharacterGroup(Vec<char>),
     NegatedCharacterGroup(Vec<char>),
     StartAnchor,
@@ -91,6 +92,12 @@ impl PatternToken {
                 if index >= input_bytes.len()
                     || (!input_bytes[index].is_ascii_alphanumeric() && input_bytes[index] != b'_')
                 {
+                    return (false, index);
+                }
+                (true, index + 1)
+            }
+            Self::Wildcard => {
+                if index >= input_bytes.len() {
                     return (false, index);
                 }
                 (true, index + 1)
@@ -144,6 +151,10 @@ fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
                     _ => return Err(anyhow::anyhow!("Unknown escape sequence: \\{}", next_char)),
                 }
                 i += 2;
+            }
+            '.' => {
+                tokens.push(PatternToken::Wildcard);
+                i += 1;
             }
             '[' => {
                 let end_idx = pattern[i..]
