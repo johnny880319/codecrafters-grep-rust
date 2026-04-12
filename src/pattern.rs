@@ -4,7 +4,7 @@ pub fn match_pattern(input_line: &str, pattern: &str) -> Result<bool> {
     let pattern_tokens = parse_pattern(pattern)?;
 
     for start in 0..input_line.len() {
-        let is_match = match_tokens_recursive(input_line.as_bytes(), start, &pattern_tokens)?;
+        let is_match = match_tokens(input_line.as_bytes(), start, &pattern_tokens)?;
         if is_match {
             return Ok(true);
         }
@@ -12,11 +12,7 @@ pub fn match_pattern(input_line: &str, pattern: &str) -> Result<bool> {
     Ok(false)
 }
 
-fn match_tokens_recursive(
-    input_bytes: &[u8],
-    start: usize,
-    tokens: &[PatternToken],
-) -> Result<bool> {
+fn match_tokens(input_bytes: &[u8], mut index: usize, tokens: &[PatternToken]) -> Result<bool> {
     if tokens.is_empty() {
         return Ok(true);
     }
@@ -26,23 +22,22 @@ fn match_tokens_recursive(
     match token {
         PatternToken::Quantifier { min, max, inner } => {
             let mut match_count = 0;
-            let mut positions = vec![start];
-            let mut next_idx = start;
+            let mut positions = vec![index];
             let mut is_match;
             while match_count < *max {
-                (is_match, next_idx) = inner.matches(input_bytes, next_idx);
+                (is_match, index) = inner.matches(input_bytes, index);
                 if !is_match {
                     break;
                 }
                 match_count += 1;
-                positions.push(next_idx);
+                positions.push(index);
             }
             if match_count < *min {
                 return Ok(false);
             }
             for count in (*min..=match_count).rev() {
                 let try_idx = positions[count];
-                if match_tokens_recursive(input_bytes, try_idx, rest_tokens)? {
+                if match_tokens(input_bytes, try_idx, rest_tokens)? {
                     return Ok(true);
                 }
             }
@@ -52,18 +47,18 @@ fn match_tokens_recursive(
             for alt_tokens in alternatives {
                 let mut combined_tokens = alt_tokens.clone();
                 combined_tokens.extend_from_slice(rest_tokens);
-                if match_tokens_recursive(input_bytes, start, &combined_tokens)? {
+                if match_tokens(input_bytes, index, &combined_tokens)? {
                     return Ok(true);
                 }
             }
             Ok(false)
         }
         _ => {
-            let (is_match, next_idx) = token.matches(input_bytes, start);
+            let (is_match, index) = token.matches(input_bytes, index);
             if !is_match {
                 return Ok(false);
             }
-            match_tokens_recursive(input_bytes, next_idx, rest_tokens)
+            match_tokens(input_bytes, index, rest_tokens)
         }
     }
 }
@@ -122,9 +117,9 @@ impl PatternToken {
     fn match_single_char(
         input_bytes: &[u8],
         index: usize,
-        predict_func: impl Fn(u8) -> bool,
+        predicate: impl Fn(u8) -> bool,
     ) -> (bool, usize) {
-        if index >= input_bytes.len() || !predict_func(input_bytes[index]) {
+        if index >= input_bytes.len() || !predicate(input_bytes[index]) {
             return (false, index);
         }
         (true, index + 1)
