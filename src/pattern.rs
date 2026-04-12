@@ -4,12 +4,29 @@ pub fn match_pattern(input_line: &str, pattern: &str) -> Result<bool> {
     let pattern_tokens = parse_pattern(pattern)?;
 
     for start in 0..input_line.len() {
-        let is_match = match_tokens(input_line.as_bytes(), start, &pattern_tokens)?;
+        let (is_match, _) = match_tokens(input_line.as_bytes(), start, &pattern_tokens)?;
         if is_match {
             return Ok(true);
         }
     }
     Ok(false)
+}
+
+pub fn match_all_patterns(input_line: &str, pattern: &str) -> Result<Vec<String>> {
+    let pattern_tokens = parse_pattern(pattern)?;
+    let mut start = 0;
+    let mut matched_strings = Vec::new();
+
+    while start <= input_line.len() {
+        let (is_match, end) = match_tokens(input_line.as_bytes(), start, &pattern_tokens)?;
+        if is_match {
+            matched_strings.push(input_line[start..end].to_string());
+            start = end; // Move past the matched portion for the next search
+            continue;
+        }
+        start += 1;
+    }
+    Ok(matched_strings)
 }
 
 #[derive(Clone)]
@@ -201,9 +218,13 @@ fn parse_alternation(pattern: &str, mut start: usize) -> Result<(PatternToken, u
     Ok((PatternToken::Alternation(alternatives), end + 1))
 }
 
-fn match_tokens(input_bytes: &[u8], index: usize, tokens: &[PatternToken]) -> Result<bool> {
+fn match_tokens(
+    input_bytes: &[u8],
+    index: usize,
+    tokens: &[PatternToken],
+) -> Result<(bool, usize)> {
     if tokens.is_empty() {
-        return Ok(true);
+        return Ok((true, index));
     }
 
     let token = &tokens[0];
@@ -223,30 +244,32 @@ fn match_tokens(input_bytes: &[u8], index: usize, tokens: &[PatternToken]) -> Re
                 positions.push(candidate_index);
             }
             if match_count < *min {
-                return Ok(false);
+                return Ok((false, index));
             }
             for count in (*min..=match_count).rev() {
                 let try_idx = positions[count];
-                if match_tokens(input_bytes, try_idx, rest_tokens)? {
-                    return Ok(true);
+                let (is_match, end) = match_tokens(input_bytes, try_idx, rest_tokens)?;
+                if is_match {
+                    return Ok((true, end));
                 }
             }
-            Ok(false)
+            Ok((false, index))
         }
         PatternToken::Alternation(alternatives) => {
             for alt_tokens in alternatives {
                 let mut combined_tokens = alt_tokens.clone();
                 combined_tokens.extend_from_slice(rest_tokens);
-                if match_tokens(input_bytes, index, &combined_tokens)? {
-                    return Ok(true);
+                let (is_match, end) = match_tokens(input_bytes, index, &combined_tokens)?;
+                if is_match {
+                    return Ok((true, end));
                 }
             }
-            Ok(false)
+            Ok((false, index))
         }
         _ => {
             let (is_match, index) = token.matches(input_bytes, index);
             if !is_match {
-                return Ok(false);
+                return Ok((false, index));
             }
             match_tokens(input_bytes, index, rest_tokens)
         }
