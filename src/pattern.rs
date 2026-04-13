@@ -236,7 +236,11 @@ fn match_tokens(
             let mut candidate_index = index;
             while match_count < *max {
                 let is_match;
-                (is_match, candidate_index) = inner.matches(input_bytes, candidate_index);
+                (is_match, candidate_index) = match_tokens(
+                    input_bytes,
+                    candidate_index,
+                    std::slice::from_ref(inner.as_ref()),
+                )?;
                 if !is_match {
                     break;
                 }
