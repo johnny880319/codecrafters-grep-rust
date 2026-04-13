@@ -61,16 +61,19 @@ struct GrepArgs {
 }
 
 fn parse_args() -> GrepArgs {
-    let o_flag = env::args().any(|arg| arg == "-o");
+    let env_args: Vec<String> = env::args().collect();
+    let o_flag = env_args.iter().any(|arg| arg == "-o");
 
-    let is_color_always = env::args().any(|arg| arg == "--color=always");
-    let is_color_auto = env::args().any(|arg| arg == "--color=auto");
+    let is_color_always = env_args.iter().any(|arg| arg == "--color=always");
+    let is_color_auto = env_args.iter().any(|arg| arg == "--color=auto");
     let color_mode = is_color_always || (is_color_auto && std::io::stdout().is_terminal());
 
     // First argument that is not a flag is the pattern
-    let pattern = env::args()
+    let pattern = env_args
+        .iter()
         .skip(1)
         .find(|arg| !arg.starts_with('-'))
+        .cloned()
         .unwrap_or_else(|| {
             eprintln!("Error: No pattern provided");
             process::exit(1);
