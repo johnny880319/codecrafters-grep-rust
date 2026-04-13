@@ -369,6 +369,7 @@ fn match_tokens(
                 let mut combined_tokens = alt_tokens.clone();
                 captures.push((index, index)); // Placeholder for the start of this alternative
                 let (is_match, end) = match_tokens(input_bytes, index, &combined_tokens, captures)?;
+                print!("Debug: Trying alternative:, is_match: {is_match}, end: {end}");
                 captures.pop(); // Remove the placeholder
                 if !is_match {
                     continue;
