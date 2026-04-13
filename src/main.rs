@@ -23,10 +23,19 @@ fn main() -> Result<()> {
     for (file_name, file_content) in paths_and_contents {
         for input_line in file_content.lines() {
             if grep_args.o_flag {
-                is_any_match |= print_result::print_all_results(input_line, &grep_args.pattern)?;
+                is_any_match |= print_result::print_all_results(
+                    input_line,
+                    &grep_args.pattern,
+                    &file_name,
+                    grep_args.print_file_name,
+                )?;
             } else if grep_args.color_mode {
-                is_any_match |=
-                    print_result::print_colored_results(input_line, &grep_args.pattern)?;
+                is_any_match |= print_result::print_colored_results(
+                    input_line,
+                    &grep_args.pattern,
+                    &file_name,
+                    grep_args.print_file_name,
+                )?;
             } else {
                 is_any_match |= print_result::print_result(
                     input_line,
