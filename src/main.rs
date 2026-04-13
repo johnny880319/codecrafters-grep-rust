@@ -1,7 +1,9 @@
 use anyhow::Result;
-use std::env;
-use std::io::{self, IsTerminal, Read};
-use std::process;
+use std::{
+    env, fs,
+    io::{self, IsTerminal, Read},
+    process,
+};
 use walkdir::WalkDir;
 mod pattern;
 mod print_result;
@@ -19,7 +21,7 @@ fn main() -> Result<()> {
     }
 
     for file_path in &grep_args.file_paths {
-        let file_content = std::fs::read_to_string(file_path).unwrap_or_else(|_| {
+        let file_content = fs::read_to_string(file_path).unwrap_or_else(|_| {
             eprintln!("Error: Could not read file {file_path}");
             process::exit(1);
         });
@@ -45,7 +47,7 @@ fn parse_args() -> GrepArgs {
 
     let is_color_always = env_args.iter().any(|arg| arg == "--color=always");
     let is_color_auto = env_args.iter().any(|arg| arg == "--color=auto");
-    let color_mode = is_color_always || (is_color_auto && std::io::stdout().is_terminal());
+    let color_mode = is_color_always || (is_color_auto && io::stdout().is_terminal());
 
     // First argument that is not a flag is the pattern
     let pattern = env_args
@@ -72,7 +74,7 @@ fn parse_args() -> GrepArgs {
     let file_paths = if r_flag {
         let mut paths = Vec::new();
         for path in file_or_dir_paths {
-            if std::fs::metadata(path).map(|m| m.is_dir()).unwrap_or(false) {
+            if fs::metadata(path).map(|m| m.is_dir()).unwrap_or(false) {
                 for entry in WalkDir::new(path).follow_links(false).into_iter().flatten() {
                     if entry.file_type().is_file() {
                         paths.push(entry.path().to_string_lossy().to_string());

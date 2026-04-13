@@ -1,4 +1,5 @@
 use anyhow::Result;
+use std::slice;
 
 pub fn match_pattern(input_line: &str, pattern: &str) -> Result<bool> {
     let pattern_tokens = parse_pattern(pattern)?;
@@ -239,7 +240,7 @@ fn match_tokens(
                 (is_match, candidate_index) = match_tokens(
                     input_bytes,
                     candidate_index,
-                    std::slice::from_ref(inner.as_ref()),
+                    slice::from_ref(inner.as_ref()),
                 )?;
                 if !is_match {
                     break;
