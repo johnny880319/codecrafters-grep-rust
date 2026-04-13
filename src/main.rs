@@ -80,38 +80,32 @@ fn parse_args() -> GrepArgs {
         });
 
     // Second argument that is not a flag is file or directory path
-    let file_or_dir_paths = env::args()
+    let file_or_dir_paths = env_args
+        .iter()
         .filter(|p| !p.starts_with('-'))
         .skip(2)
         .collect::<Vec<_>>();
 
     // If -r flag is provided, we need to recursively search for files in the provided directories
-    let r_flag = env::args().any(|arg| arg == "-r");
+    let r_flag = env_args.iter().any(|arg| arg == "-r");
     let print_file_name = r_flag || file_or_dir_paths.len() > 1;
 
     let file_paths = if r_flag {
         let mut paths = Vec::new();
         for path in file_or_dir_paths {
-            if std::fs::metadata(&path)
-                .map(|m| m.is_dir())
-                .unwrap_or(false)
-            {
-                for entry in WalkDir::new(&path)
-                    .follow_links(false)
-                    .into_iter()
-                    .flatten()
-                {
+            if std::fs::metadata(path).map(|m| m.is_dir()).unwrap_or(false) {
+                for entry in WalkDir::new(path).follow_links(false).into_iter().flatten() {
                     if entry.file_type().is_file() {
                         paths.push(entry.path().to_string_lossy().to_string());
                     }
                 }
             } else {
-                paths.push(path);
+                paths.push(path.clone());
             }
         }
         paths
     } else {
-        file_or_dir_paths
+        file_or_dir_paths.into_iter().cloned().collect()
     };
 
     let paths_and_contents = file_paths
