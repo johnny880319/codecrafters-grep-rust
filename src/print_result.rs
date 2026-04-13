@@ -1,14 +1,20 @@
 use crate::pattern;
 use anyhow::Result;
 
-pub fn print_result(input_line: &str, pattern: &str, file_name: Option<&str>) -> Result<bool> {
+pub fn print_result(
+    input_line: &str,
+    pattern: &str,
+    file_name: &str,
+    print_file_name: bool,
+) -> Result<bool> {
     let is_match = pattern::match_pattern(input_line, pattern)?;
     if !is_match {
         return Ok(false);
     }
-    match file_name {
-        Some(name) => println!("{name}:{input_line}"),
-        None => println!("{input_line}"),
+    if print_file_name {
+        println!("{file_name}:{input_line}");
+    } else {
+        println!("{input_line}");
     }
     Ok(true)
 }
