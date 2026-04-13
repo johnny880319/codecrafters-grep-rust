@@ -5,7 +5,12 @@ pub fn match_pattern(input_line: &str, pattern: &str) -> Result<bool> {
     let pattern_tokens = parse_pattern(pattern)?;
 
     for start in 0..input_line.len() {
-        let (is_match, _) = match_tokens(input_line.as_bytes(), start, &pattern_tokens)?;
+        let (is_match, _) = match_tokens(
+            input_line.as_bytes(),
+            start,
+            &pattern_tokens,
+            &mut Vec::new(),
+        )?;
         if is_match {
             return Ok(true);
         }
@@ -19,7 +24,12 @@ pub fn match_all_patterns(input_line: &str, pattern: &str) -> Result<Vec<(usize,
     let mut matched_idx = Vec::new();
 
     while start <= input_line.len() {
-        let (is_match, end) = match_tokens(input_line.as_bytes(), start, &pattern_tokens)?;
+        let (is_match, end) = match_tokens(
+            input_line.as_bytes(),
+            start,
+            &pattern_tokens,
+            &mut Vec::new(),
+        )?;
         if is_match {
             matched_idx.push((start, end));
             start = end; // Move past the matched portion for the next search
@@ -46,6 +56,7 @@ enum PatternToken {
         inner: Box<Self>,
     },
     Alternation(Vec<Vec<Self>>),
+    Backreference(usize),
 }
 
 impl PatternToken {
@@ -75,7 +86,7 @@ impl PatternToken {
                 }
                 (true, index)
             }
-            Self::Quantifier { .. } | Self::Alternation(_) => {
+            Self::Quantifier { .. } | Self::Alternation(_) | Self::Backreference(_) => {
                 unreachable!("This should be handled in the recursive matching logic.")
             }
         }
@@ -105,11 +116,21 @@ fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
                 }
                 let next_char = pattern.as_bytes()[i + 1] as char;
                 match next_char {
-                    'd' => tokens.push(PatternToken::Digit),
-                    'w' => tokens.push(PatternToken::WordChar),
+                    'd' => {
+                        tokens.push(PatternToken::Digit);
+                        i += 2;
+                    }
+                    'w' => {
+                        tokens.push(PatternToken::WordChar);
+                        i += 2;
+                    }
+                    '1'..='9' => {
+                        let backref_num;
+                        (backref_num, i) = parse_number(pattern, i + 1)?;
+                        tokens.push(PatternToken::Backreference(backref_num));
+                    }
                     _ => return Err(anyhow::anyhow!("Unknown escape sequence: \\{}", next_char)),
                 }
-                i += 2;
             }
             '.' => {
                 tokens.push(PatternToken::Wildcard);
@@ -181,6 +202,17 @@ fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
         }
     }
     Ok(tokens)
+}
+
+fn parse_number(pattern: &str, start: usize) -> Result<(usize, usize)> {
+    let mut end = start;
+    while end < pattern.len() && pattern.as_bytes()[end].is_ascii_digit() {
+        end += 1;
+    }
+    let number = pattern[start..end]
+        .parse::<usize>()
+        .map_err(|_| anyhow::anyhow!("Invalid number format: {}", &pattern[start..end]))?;
+    Ok((number, end))
 }
 
 fn parse_character_group(pattern: &str, start: usize) -> Result<(PatternToken, usize)> {
@@ -293,6 +325,7 @@ fn match_tokens(
     input_bytes: &[u8],
     index: usize,
     tokens: &[PatternToken],
+    captures: &mut Vec<(usize, usize)>,
 ) -> Result<(bool, usize)> {
     if tokens.is_empty() {
         return Ok((true, index));
@@ -311,6 +344,7 @@ fn match_tokens(
                     input_bytes,
                     candidate_index,
                     slice::from_ref(inner.as_ref()),
+                    captures,
                 )?;
                 if !is_match {
                     break;
@@ -323,7 +357,7 @@ fn match_tokens(
             }
             for count in (*min..=match_count).rev() {
                 let try_idx = positions[count];
-                let (is_match, end) = match_tokens(input_bytes, try_idx, rest_tokens)?;
+                let (is_match, end) = match_tokens(input_bytes, try_idx, rest_tokens, captures)?;
                 if is_match {
                     return Ok((true, end));
                 }
@@ -333,20 +367,37 @@ fn match_tokens(
         PatternToken::Alternation(alternatives) => {
             for alt_tokens in alternatives {
                 let mut combined_tokens = alt_tokens.clone();
+                let (is_match, end) = match_tokens(input_bytes, index, &combined_tokens, captures)?;
+                if !is_match {
+                    continue;
+                }
                 combined_tokens.extend_from_slice(rest_tokens);
-                let (is_match, end) = match_tokens(input_bytes, index, &combined_tokens)?;
+                captures.push((index, end));
+                let (is_match, end) = match_tokens(input_bytes, index, &combined_tokens, captures)?;
                 if is_match {
                     return Ok((true, end));
                 }
             }
             Ok((false, index))
         }
+        PatternToken::Backreference(group_num) => {
+            let (start, end) = captures
+                .get(*group_num - 1)
+                .ok_or_else(|| anyhow::anyhow!("Invalid backreference: \\{}", group_num))?;
+            let group_len = end - start;
+            if index + group_len > input_bytes.len()
+                || input_bytes[*start..*end] != input_bytes[index..index + group_len]
+            {
+                return Ok((false, index));
+            }
+            match_tokens(input_bytes, index + group_len, rest_tokens, captures)
+        }
         _ => {
             let (is_match, index) = token.matches(input_bytes, index);
             if !is_match {
                 return Ok((false, index));
             }
-            match_tokens(input_bytes, index, rest_tokens)
+            match_tokens(input_bytes, index, rest_tokens, captures)
         }
     }
 }
