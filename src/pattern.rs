@@ -367,6 +367,7 @@ fn match_tokens(
         PatternToken::Alternation(alternatives) => {
             for alt_tokens in alternatives {
                 let mut combined_tokens = alt_tokens.clone();
+                captures.push((index, index)); // Placeholder for the start of this alternative
                 let (is_match, end) = match_tokens(input_bytes, index, &combined_tokens, captures)?;
                 if !is_match {
                     continue;
