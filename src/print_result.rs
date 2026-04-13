@@ -11,9 +11,7 @@ pub fn print_result(
     if !is_match {
         return Ok(false);
     }
-    if print_file_name {
-        print!("{file_path}:");
-    }
+    print_prefix(file_path, print_file_name);
     println!("{input_line}");
 
     Ok(true)
@@ -27,9 +25,7 @@ pub fn print_all_results(
 ) -> Result<bool> {
     let matched_idx = pattern::match_all_patterns(input_line, pattern)?;
     for (start, end) in &matched_idx {
-        if print_file_name {
-            print!("{file_path}:");
-        }
+        print_prefix(file_path, print_file_name);
         println!("{}", &input_line[*start..*end]);
     }
     Ok(!matched_idx.is_empty())
@@ -46,14 +42,18 @@ pub fn print_colored_results(
         return Ok(false);
     }
     let mut last_end = 0;
+    print_prefix(file_path, print_file_name);
     for (start, end) in &matched_idx {
-        if print_file_name {
-            print!("{file_path}:");
-        }
         print!("{}", &input_line[last_end..*start]);
         print!("\x1b[01;31m{}\x1b[m", &input_line[*start..*end]);
         last_end = *end;
     }
     println!("{}", &input_line[last_end..]);
     Ok(true)
+}
+
+fn print_prefix(file_path: &str, print_file_name: bool) {
+    if print_file_name {
+        print!("{file_path}:");
+    }
 }
