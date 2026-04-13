@@ -157,6 +157,18 @@ fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
                 tokens.push(new_token);
                 i += 1;
             }
+            '{' => {
+                if tokens.is_empty() {
+                    return Err(anyhow::anyhow!(
+                        "Quantifier '{}' cannot be the first token in the pattern",
+                        c
+                    ));
+                }
+                let prev_token = tokens.pop().unwrap();
+                let new_token;
+                (new_token, i) = parse_quantifier(pattern, i + 1, prev_token)?;
+                tokens.push(new_token);
+            }
             '(' => {
                 let new_token;
                 (new_token, i) = parse_alternation(pattern, i + 1)?;
@@ -217,6 +229,64 @@ fn parse_alternation(pattern: &str, mut start: usize) -> Result<(PatternToken, u
         return Err(anyhow::anyhow!("Unmatched ( in pattern"));
     }
     Ok((PatternToken::Alternation(alternatives), end + 1))
+}
+
+fn parse_quantifier(
+    pattern: &str,
+    start: usize,
+    prev_token: PatternToken,
+) -> Result<(PatternToken, usize)> {
+    let end = pattern[start..]
+        .find('}')
+        .ok_or_else(|| anyhow::anyhow!("Unmatched {{ in pattern"))?
+        + start;
+    let quantifier_content = &pattern[start..end];
+    let parts: Vec<&str> = quantifier_content.split(',').collect();
+    match parts.len() {
+        1 => {
+            let count = parts[0].parse::<usize>().map_err(|_| {
+                anyhow::anyhow!("Invalid quantifier format: {{{}}}", quantifier_content)
+            })?;
+            Ok((
+                PatternToken::Quantifier {
+                    min: count,
+                    max: count,
+                    inner: Box::new(prev_token),
+                },
+                end + 1,
+            ))
+        }
+        2 => {
+            let min = parts[0].parse::<usize>().map_err(|_| {
+                anyhow::anyhow!("Invalid quantifier format: {{{}}}", quantifier_content)
+            })?;
+            let max = if parts[1].is_empty() {
+                usize::MAX
+            } else {
+                parts[1].parse::<usize>().map_err(|_| {
+                    anyhow::anyhow!("Invalid quantifier format: {{{}}}", quantifier_content)
+                })?
+            };
+            if min > max {
+                return Err(anyhow::anyhow!(
+                    "Quantifier min cannot be greater than max: {{{}}}",
+                    quantifier_content
+                ));
+            }
+            Ok((
+                PatternToken::Quantifier {
+                    min,
+                    max,
+                    inner: Box::new(prev_token),
+                },
+                end + 1,
+            ))
+        }
+        _ => Err(anyhow::anyhow!(
+            "Invalid quantifier format: {{{}}}",
+            quantifier_content
+        )),
+    }
 }
 
 fn match_tokens(
