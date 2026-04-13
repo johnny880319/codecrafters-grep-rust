@@ -9,42 +9,21 @@ mod print_result;
 // Usage: echo <input_text> | your_program.sh -E <pattern>
 fn main() -> Result<()> {
     let grep_args = parse_args();
-    let mut paths_and_contents = grep_args.paths_and_contents;
-
-    if paths_and_contents.is_empty() {
-        paths_and_contents.push((String::new(), {
-            let mut input_string = String::new();
-            io::stdin().read_to_string(&mut input_string).unwrap();
-            input_string
-        }));
-    }
 
     let mut is_any_match = false;
-    for (file_name, file_content) in paths_and_contents {
-        for input_line in file_content.lines() {
-            if grep_args.o_flag {
-                is_any_match |= print_result::print_all_results(
-                    input_line,
-                    &grep_args.pattern,
-                    &file_name,
-                    grep_args.print_file_name,
-                )?;
-            } else if grep_args.color_mode {
-                is_any_match |= print_result::print_colored_results(
-                    input_line,
-                    &grep_args.pattern,
-                    &file_name,
-                    grep_args.print_file_name,
-                )?;
-            } else {
-                is_any_match |= print_result::print_result(
-                    input_line,
-                    &grep_args.pattern,
-                    &file_name,
-                    grep_args.print_file_name,
-                )?;
-            }
-        }
+
+    if grep_args.file_paths.is_empty() {
+        let mut input_string = String::new();
+        io::stdin().read_to_string(&mut input_string).unwrap();
+        is_any_match |= match_content(&input_string, &grep_args, "stdin")?;
+    }
+
+    for file_path in &grep_args.file_paths {
+        let file_content = std::fs::read_to_string(file_path).unwrap_or_else(|_| {
+            eprintln!("Error: Could not read file {file_path}");
+            process::exit(1);
+        });
+        is_any_match |= match_content(&file_content, &grep_args, file_path)?;
     }
     if !is_any_match {
         process::exit(1);
@@ -54,7 +33,7 @@ fn main() -> Result<()> {
 
 struct GrepArgs {
     pattern: String,
-    paths_and_contents: Vec<(String, String)>,
+    file_paths: Vec<String>,
     print_file_name: bool,
     o_flag: bool,
     color_mode: bool,
@@ -108,22 +87,40 @@ fn parse_args() -> GrepArgs {
         file_or_dir_paths.into_iter().cloned().collect()
     };
 
-    let paths_and_contents = file_paths
-        .into_iter()
-        .map(|s| {
-            let content = std::fs::read_to_string(&s).unwrap_or_else(|_| {
-                eprintln!("Error: Could not read file {s}");
-                process::exit(1);
-            });
-            (s, content)
-        })
-        .collect::<Vec<_>>();
-
     GrepArgs {
         pattern,
-        paths_and_contents,
+        file_paths,
         print_file_name,
         o_flag,
         color_mode,
     }
+}
+
+fn match_content(content: &str, grep_args: &GrepArgs, file_path: &str) -> Result<bool> {
+    let mut is_any_match = false;
+    for input_line in content.lines() {
+        if grep_args.o_flag {
+            is_any_match |= print_result::print_all_results(
+                input_line,
+                &grep_args.pattern,
+                file_path,
+                grep_args.print_file_name,
+            )?;
+        } else if grep_args.color_mode {
+            is_any_match |= print_result::print_colored_results(
+                input_line,
+                &grep_args.pattern,
+                file_path,
+                grep_args.print_file_name,
+            )?;
+        } else {
+            is_any_match |= print_result::print_result(
+                input_line,
+                &grep_args.pattern,
+                file_path,
+                grep_args.print_file_name,
+            )?;
+        }
+    }
+    Ok(is_any_match)
 }

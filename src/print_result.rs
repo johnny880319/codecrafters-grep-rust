@@ -4,7 +4,7 @@ use anyhow::Result;
 pub fn print_result(
     input_line: &str,
     pattern: &str,
-    file_name: &str,
+    file_path: &str,
     print_file_name: bool,
 ) -> Result<bool> {
     let is_match = pattern::match_pattern(input_line, pattern)?;
@@ -12,7 +12,7 @@ pub fn print_result(
         return Ok(false);
     }
     if print_file_name {
-        print!("{file_name}:");
+        print!("{file_path}:");
     }
     println!("{input_line}");
 
@@ -22,13 +22,13 @@ pub fn print_result(
 pub fn print_all_results(
     input_line: &str,
     pattern: &str,
-    file_name: &str,
+    file_path: &str,
     print_file_name: bool,
 ) -> Result<bool> {
     let matched_idx = pattern::match_all_patterns(input_line, pattern)?;
     for (start, end) in &matched_idx {
         if print_file_name {
-            print!("{file_name}:");
+            print!("{file_path}:");
         }
         println!("{}", &input_line[*start..*end]);
     }
@@ -38,7 +38,7 @@ pub fn print_all_results(
 pub fn print_colored_results(
     input_line: &str,
     pattern: &str,
-    file_name: &str,
+    file_path: &str,
     print_file_name: bool,
 ) -> Result<bool> {
     let matched_idx = pattern::match_all_patterns(input_line, pattern)?;
@@ -48,7 +48,7 @@ pub fn print_colored_results(
     let mut last_end = 0;
     for (start, end) in &matched_idx {
         if print_file_name {
-            print!("{file_name}:");
+            print!("{file_path}:");
         }
         print!("{}", &input_line[last_end..*start]);
         print!("\x1b[01;31m{}\x1b[m", &input_line[*start..*end]);
