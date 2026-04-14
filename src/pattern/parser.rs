@@ -8,18 +8,18 @@ pub fn parse_pattern(pattern_text: &str) -> Result<Vec<PatternToken>> {
         let c = pattern_text.as_bytes()[i] as char;
         match c {
             '\\' => {
-                let new_token;
-                (new_token, i) = parse_escape_sequence(pattern_text, i)?;
+                let (new_token, new_i) = parse_escape_sequence(pattern_text, i)?;
                 tokens.push(new_token);
+                i = new_i;
             }
             '.' => {
                 tokens.push(PatternToken::Wildcard);
                 i += 1;
             }
             '[' => {
-                let new_token;
-                (new_token, i) = parse_character_group(pattern_text, i + 1)?;
+                let (new_token, new_i) = parse_character_group(pattern_text, i + 1)?;
                 tokens.push(new_token);
+                i = new_i;
             }
             '^' if i == 0 => {
                 tokens.push(PatternToken::StartAnchor);
@@ -30,51 +30,10 @@ pub fn parse_pattern(pattern_text: &str) -> Result<Vec<PatternToken>> {
                 i += 1;
             }
             '+' | '*' | '?' => {
-                if tokens.is_empty() {
-                    return Err(anyhow::anyhow!(
-                        "Quantifier '{}' cannot be the first token in the pattern",
-                        c
-                    ));
-                }
-                let prev_token = tokens.pop().ok_or_else(|| {
-                    anyhow::anyhow!(
-                        "Quantifier '{}' cannot be the first token in the pattern",
-                        c
-                    )
-                })?;
-                let new_token = match c {
-                    '+' => PatternToken::Quantifier {
-                        min: 1,
-                        max: usize::MAX,
-                        inner: Box::new(prev_token),
-                    },
-                    '*' => PatternToken::Quantifier {
-                        min: 0,
-                        max: usize::MAX,
-                        inner: Box::new(prev_token),
-                    },
-                    '?' => PatternToken::Quantifier {
-                        min: 0,
-                        max: 1,
-                        inner: Box::new(prev_token),
-                    },
-                    _ => unreachable!(),
-                };
+                let prev_token = pop_previous_token(&mut tokens)?;
+                let (new_token, new_i) = parse_quantifier(pattern_text, i, prev_token)?;
                 tokens.push(new_token);
-                i += 1;
-            }
-            '{' => {
-                if tokens.is_empty() {
-                    return Err(anyhow::anyhow!(
-                        "Quantifier '{c}' cannot be the first token in the pattern"
-                    ));
-                }
-                let prev_token = tokens.pop().ok_or_else(|| {
-                    anyhow::anyhow!("Quantifier '{c}' cannot be the first token in the pattern")
-                })?;
-                let new_token;
-                (new_token, i) = parse_quantifier(pattern_text, i + 1, prev_token)?;
-                tokens.push(new_token);
+                i = new_i;
             }
             '(' => {
                 let new_token;
@@ -135,37 +94,49 @@ fn parse_character_group(pattern_text: &str, start: usize) -> Result<(PatternTok
     ))
 }
 
-fn parse_alternation(pattern_text: &str, mut start: usize) -> Result<(PatternToken, usize)> {
-    let mut depth = 1;
-    let mut end = start;
-    let mut alternatives = Vec::new();
-    while end < pattern_text.len() {
-        match pattern_text.as_bytes()[end] as char {
-            '(' => {
-                depth += 1;
-            }
-            '|' if depth == 1 => {
-                alternatives.push(parse_pattern(&pattern_text[start..end])?);
-                start = end + 1;
-            }
-            ')' => {
-                depth -= 1;
-                if depth == 0 {
-                    alternatives.push(parse_pattern(&pattern_text[start..end])?);
-                    break;
-                }
-            }
-            _ => {}
-        }
-        end += 1;
-    }
-    if depth != 0 {
-        return Err(anyhow::anyhow!("Unmatched ( in pattern"));
-    }
-    Ok((PatternToken::Alternation(alternatives), end + 1))
+fn pop_previous_token(tokens: &mut Vec<PatternToken>) -> Result<PatternToken> {
+    let prev_token = tokens
+        .pop()
+        .ok_or_else(|| anyhow::anyhow!("Quantifier cannot be the first token in the pattern"))?;
+    Ok(prev_token)
 }
 
 fn parse_quantifier(
+    pattern_text: &str,
+    start: usize,
+    prev_token: PatternToken,
+) -> Result<(PatternToken, usize)> {
+    match pattern_text.as_bytes()[start] as char {
+        '+' => Ok((
+            PatternToken::Quantifier {
+                min: 1,
+                max: usize::MAX,
+                inner: Box::new(prev_token),
+            },
+            start + 1,
+        )),
+        '*' => Ok((
+            PatternToken::Quantifier {
+                min: 0,
+                max: usize::MAX,
+                inner: Box::new(prev_token),
+            },
+            start + 1,
+        )),
+        '?' => Ok((
+            PatternToken::Quantifier {
+                min: 0,
+                max: 1,
+                inner: Box::new(prev_token),
+            },
+            start + 1,
+        )),
+        '{' => parse_range_quantifier(pattern_text, start + 1, prev_token),
+        _ => unreachable!(),
+    }
+}
+
+fn parse_range_quantifier(
     pattern_text: &str,
     start: usize,
     prev_token: PatternToken,
@@ -221,4 +192,34 @@ fn parse_quantifier(
             quantifier_content
         )),
     }
+}
+
+fn parse_alternation(pattern_text: &str, mut start: usize) -> Result<(PatternToken, usize)> {
+    let mut depth = 1;
+    let mut end = start;
+    let mut alternatives = Vec::new();
+    while end < pattern_text.len() {
+        match pattern_text.as_bytes()[end] as char {
+            '(' => {
+                depth += 1;
+            }
+            '|' if depth == 1 => {
+                alternatives.push(parse_pattern(&pattern_text[start..end])?);
+                start = end + 1;
+            }
+            ')' => {
+                depth -= 1;
+                if depth == 0 {
+                    alternatives.push(parse_pattern(&pattern_text[start..end])?);
+                    break;
+                }
+            }
+            _ => {}
+        }
+        end += 1;
+    }
+    if depth != 0 {
+        return Err(anyhow::anyhow!("Unmatched ( in pattern"));
+    }
+    Ok((PatternToken::Alternation(alternatives), end + 1))
 }
