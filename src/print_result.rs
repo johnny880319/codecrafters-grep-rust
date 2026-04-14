@@ -24,12 +24,12 @@ pub fn print_all_results(
     file_path: &str,
     print_file_name: bool,
 ) -> Result<bool> {
-    let matched_idx = pattern::match_all_patterns(input_line, pattern_tokens)?;
+    let (is_match, matched_idx) = pattern::match_all_patterns(input_line, pattern_tokens)?;
     for (start, end) in &matched_idx {
         print_prefix(file_path, print_file_name);
         println!("{}", &input_line[*start..*end]);
     }
-    Ok(!matched_idx.is_empty())
+    Ok(is_match)
 }
 
 pub fn print_colored_results(
@@ -38,9 +38,9 @@ pub fn print_colored_results(
     file_path: &str,
     print_file_name: bool,
 ) -> Result<bool> {
-    let matched_idx = pattern::match_all_patterns(input_line, pattern_tokens)?;
+    let (is_match, matched_idx) = pattern::match_all_patterns(input_line, pattern_tokens)?;
     if matched_idx.is_empty() {
-        return Ok(false);
+        return Ok(is_match);
     }
     let mut last_end = 0;
     print_prefix(file_path, print_file_name);
@@ -50,7 +50,7 @@ pub fn print_colored_results(
         last_end = *end;
     }
     println!("{}", &input_line[last_end..]);
-    Ok(true)
+    Ok(is_match)
 }
 
 fn print_prefix(file_path: &str, print_file_name: bool) {

@@ -138,8 +138,9 @@ pub fn match_pattern(input_line: &str, pattern_tokens: &[PatternToken]) -> Resul
 pub fn match_all_patterns(
     input_line: &str,
     pattern_tokens: &[PatternToken],
-) -> Result<Vec<(usize, usize)>> {
+) -> Result<(bool, Vec<(usize, usize)>)> {
     let mut start = 0;
+    let mut is_any_match = false;
     let mut matched_idx = Vec::new();
 
     while start <= input_line.len() {
@@ -150,13 +151,16 @@ pub fn match_all_patterns(
             &mut Vec::new(),
         )?;
         if is_match {
-            matched_idx.push((start, end));
-            start = end; // Move past the matched portion for the next search
-            continue;
+            is_any_match = true;
+            if end != start {
+                matched_idx.push((start, end));
+                start = end; // Move past the matched portion for the next search
+                continue;
+            }
         }
         start += 1;
     }
-    Ok(matched_idx)
+    Ok((is_any_match, matched_idx))
 }
 
 impl PatternToken {
@@ -420,11 +424,13 @@ mod tests {
     fn assert_match_all_patterns(
         input_line: &str,
         pattern: &str,
-        expected: &[(usize, usize)],
+        expect_match: bool,
+        expected_idx: &[(usize, usize)],
     ) -> Result<()> {
         let tokens = parse_pattern(pattern)?;
-        let matched_idx = match_all_patterns(input_line, &tokens)?;
-        assert_eq!(matched_idx, expected);
+        let (is_match, matched_idx) = match_all_patterns(input_line, &tokens)?;
+        assert_eq!(is_match, expect_match);
+        assert_eq!(matched_idx, expected_idx);
         Ok(())
     }
 
@@ -450,18 +456,18 @@ mod tests {
 
     #[test]
     fn match_all_patterns_returns_non_overlapping_matches() -> Result<()> {
-        assert_match_all_patterns("banana", "a", &[(1, 2), (3, 4), (5, 6)])
+        assert_match_all_patterns("banana", "a", true, &[(1, 2), (3, 4), (5, 6)])
     }
 
     #[test]
     #[ignore = "current implementation loops forever on zero-length matches"]
     fn match_all_patterns_skips_empty_matches_for_star_quantifier() -> Result<()> {
-        assert_match_all_patterns("abc", "a*", &[(0, 1)])
+        assert_match_all_patterns("abc", "a*", true, &[(0, 1)])
     }
 
     #[test]
     #[ignore = "current implementation loops forever on zero-length matches"]
     fn match_all_patterns_skips_empty_matches_for_optional_quantifier() -> Result<()> {
-        assert_match_all_patterns("abc", "a?", &[(0, 1)])
+        assert_match_all_patterns("abc", "a?", true, &[(0, 1)])
     }
 }
