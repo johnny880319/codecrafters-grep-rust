@@ -35,18 +35,18 @@ pub fn match_pattern(input_line: &str, pattern_tokens: &[PatternToken]) -> Resul
     Ok(false)
 }
 
-pub struct PatternMatchs {
-    pub is_match: bool,
-    pub matched_idx: Vec<(usize, usize)>,
+pub struct PatternMatches {
+    pub has_match: bool,
+    pub ranges: Vec<(usize, usize)>,
 }
 
 pub fn match_all_patterns(
     input_line: &str,
     pattern_tokens: &[PatternToken],
-) -> Result<PatternMatchs> {
+) -> Result<PatternMatches> {
     let mut start = 0;
-    let mut is_any_match = false;
-    let mut matched_idx = Vec::new();
+    let mut has_match = false;
+    let mut ranges = Vec::new();
 
     while start <= input_line.len() {
         let (is_match, end) = match_tokens(
@@ -55,18 +55,15 @@ pub fn match_all_patterns(
             pattern_tokens,
             &mut Vec::new(),
         )?;
-        is_any_match |= is_match;
+        has_match |= is_match;
         if !is_match || end <= start {
             start += 1; // Move to the next character if no match or empty match
             continue;
         }
-        matched_idx.push((start, end));
+        ranges.push((start, end));
         start = end; // Move past the matched portion for the next search
     }
-    Ok(PatternMatchs {
-        is_match: is_any_match,
-        matched_idx,
-    })
+    Ok(PatternMatches { has_match, ranges })
 }
 
 fn match_tokens(
@@ -219,8 +216,8 @@ mod tests {
     ) -> Result<()> {
         let tokens = parser::parse_pattern(pattern)?;
         let pattern_matchs = match_all_patterns(input_line, &tokens)?;
-        assert_eq!(pattern_matchs.is_match, expect_match);
-        assert_eq!(pattern_matchs.matched_idx, expected_idx);
+        assert_eq!(pattern_matchs.has_match, expect_match);
+        assert_eq!(pattern_matchs.ranges, expected_idx);
         Ok(())
     }
 
