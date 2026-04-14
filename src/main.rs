@@ -34,7 +34,7 @@ fn main() -> Result<()> {
 }
 
 struct GrepArgs {
-    pattern: String,
+    pattern_text: String,
     file_paths: Vec<String>,
     print_file_name: bool,
     o_flag: bool,
@@ -50,7 +50,7 @@ fn parse_args() -> GrepArgs {
     let color_mode = is_color_always || (is_color_auto && io::stdout().is_terminal());
 
     // First argument that is not a flag is the pattern
-    let pattern = env_args
+    let pattern_text = env_args
         .iter()
         .skip(1)
         .find(|arg| !arg.starts_with('-'))
@@ -90,7 +90,7 @@ fn parse_args() -> GrepArgs {
     };
 
     GrepArgs {
-        pattern,
+        pattern_text,
         file_paths,
         print_file_name,
         o_flag,
@@ -99,7 +99,7 @@ fn parse_args() -> GrepArgs {
 }
 
 fn match_content(content: &str, grep_args: &GrepArgs, file_path: &str) -> Result<bool> {
-    let pattern_tokens = pattern::parse_pattern(&grep_args.pattern)?;
+    let pattern_tokens = pattern::parse_pattern(&grep_args.pattern_text)?;
     let mut is_any_match = false;
     for input_line in content.lines() {
         if grep_args.o_flag {
