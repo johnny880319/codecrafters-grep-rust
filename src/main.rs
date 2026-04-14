@@ -12,7 +12,7 @@ mod print_result;
 // Usage: echo <input_text> | your_program.sh -E <pattern>
 fn main() -> Result<()> {
     let grep_args = parse_args();
-    let pattern_tokens = pattern::parse_pattern(&grep_args.pattern_text)?;
+    let pattern_tokens = CompiledPattern::parse_pattern(&grep_args.pattern_text)?;
 
     let mut is_any_match = false;
 

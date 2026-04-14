@@ -1,52 +1,54 @@
 use super::matcher::{CompiledPattern, PatternToken};
 use anyhow::Result;
 
-pub fn parse_pattern(pattern_text: &str) -> Result<CompiledPattern> {
-    let mut tokens = Vec::new();
-    let mut i = 0;
-    while i < pattern_text.len() {
-        let c = pattern_text.as_bytes()[i] as char;
-        match c {
-            '\\' => {
-                let (new_token, new_i) = parse_escape_sequence(pattern_text, i)?;
-                tokens.push(new_token);
-                i = new_i;
-            }
-            '.' => {
-                tokens.push(PatternToken::Wildcard);
-                i += 1;
-            }
-            '[' => {
-                let (new_token, new_i) = parse_character_group(pattern_text, i + 1)?;
-                tokens.push(new_token);
-                i = new_i;
-            }
-            '^' if i == 0 => {
-                tokens.push(PatternToken::StartAnchor);
-                i += 1;
-            }
-            '$' if i == pattern_text.len() - 1 => {
-                tokens.push(PatternToken::EndAnchor);
-                i += 1;
-            }
-            '+' | '*' | '?' | '{' => {
-                let prev_token = pop_previous_token(&mut tokens)?;
-                let (new_token, new_i) = parse_quantifier(pattern_text, i, prev_token)?;
-                tokens.push(new_token);
-                i = new_i;
-            }
-            '(' => {
-                let new_token;
-                (new_token, i) = parse_alternation(pattern_text, i + 1)?;
-                tokens.push(new_token);
-            }
-            _ => {
-                tokens.push(PatternToken::Literal(c));
-                i += 1;
+impl CompiledPattern {
+    pub fn parse_pattern(pattern_text: &str) -> Result<Self> {
+        let mut tokens = Vec::new();
+        let mut i = 0;
+        while i < pattern_text.len() {
+            let c = pattern_text.as_bytes()[i] as char;
+            match c {
+                '\\' => {
+                    let (new_token, new_i) = parse_escape_sequence(pattern_text, i)?;
+                    tokens.push(new_token);
+                    i = new_i;
+                }
+                '.' => {
+                    tokens.push(PatternToken::Wildcard);
+                    i += 1;
+                }
+                '[' => {
+                    let (new_token, new_i) = parse_character_group(pattern_text, i + 1)?;
+                    tokens.push(new_token);
+                    i = new_i;
+                }
+                '^' if i == 0 => {
+                    tokens.push(PatternToken::StartAnchor);
+                    i += 1;
+                }
+                '$' if i == pattern_text.len() - 1 => {
+                    tokens.push(PatternToken::EndAnchor);
+                    i += 1;
+                }
+                '+' | '*' | '?' | '{' => {
+                    let prev_token = pop_previous_token(&mut tokens)?;
+                    let (new_token, new_i) = parse_quantifier(pattern_text, i, prev_token)?;
+                    tokens.push(new_token);
+                    i = new_i;
+                }
+                '(' => {
+                    let new_token;
+                    (new_token, i) = parse_alternation(pattern_text, i + 1)?;
+                    tokens.push(new_token);
+                }
+                _ => {
+                    tokens.push(PatternToken::Literal(c));
+                    i += 1;
+                }
             }
         }
+        Ok(Self { tokens })
     }
-    Ok(CompiledPattern { tokens })
 }
 
 fn parse_escape_sequence(pattern_text: &str, start: usize) -> Result<(PatternToken, usize)> {
@@ -204,13 +206,15 @@ fn parse_alternation(pattern_text: &str, mut start: usize) -> Result<(PatternTok
                 depth += 1;
             }
             '|' if depth == 1 => {
-                alternatives.push(parse_pattern(&pattern_text[start..end])?.tokens);
+                alternatives
+                    .push(CompiledPattern::parse_pattern(&pattern_text[start..end])?.tokens);
                 start = end + 1;
             }
             ')' => {
                 depth -= 1;
                 if depth == 0 {
-                    alternatives.push(parse_pattern(&pattern_text[start..end])?.tokens);
+                    alternatives
+                        .push(CompiledPattern::parse_pattern(&pattern_text[start..end])?.tokens);
                     break;
                 }
             }

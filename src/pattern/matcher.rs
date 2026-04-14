@@ -195,11 +195,11 @@ impl PatternToken {
 
 #[cfg(test)]
 mod tests {
-    use crate::pattern;
+    use super::CompiledPattern;
     use anyhow::Result;
 
     fn assert_match_pattern(input_line: &str, pattern_text: &str, expected: bool) -> Result<()> {
-        let compiled_pattern = pattern::parse_pattern(pattern_text)?;
+        let compiled_pattern = CompiledPattern::parse_pattern(pattern_text)?;
         let is_match = compiled_pattern.match_pattern(input_line)?;
         assert_eq!(is_match, expected);
         Ok(())
@@ -211,7 +211,7 @@ mod tests {
         expect_match: bool,
         expected_idx: &[(usize, usize)],
     ) -> Result<()> {
-        let compiled_pattern = pattern::parse_pattern(pattern_text)?;
+        let compiled_pattern = CompiledPattern::parse_pattern(pattern_text)?;
         let pattern_matches = compiled_pattern.match_all_patterns(input_line)?;
         assert_eq!(pattern_matches.has_match, expect_match);
         assert_eq!(pattern_matches.ranges, expected_idx);
