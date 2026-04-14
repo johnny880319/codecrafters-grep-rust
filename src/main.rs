@@ -1,5 +1,4 @@
 use anyhow::Result;
-use pattern::parser;
 use std::{
     env, fs,
     io::{self, IsTerminal, Read},
@@ -100,7 +99,7 @@ fn parse_args() -> GrepArgs {
 }
 
 fn match_content(content: &str, grep_args: &GrepArgs, file_path: &str) -> Result<bool> {
-    let pattern_tokens = parser::parse_pattern(&grep_args.pattern)?;
+    let pattern_tokens = pattern::parse_pattern(&grep_args.pattern)?;
     let mut is_any_match = false;
     for input_line in content.lines() {
         if grep_args.o_flag {
