@@ -84,8 +84,7 @@ fn match_tokens(
             let mut positions = vec![index];
             let mut candidate_index = index;
             while match_count < *max {
-                let is_match;
-                (is_match, candidate_index) = match_tokens(
+                let (is_match, new_index) = match_tokens(
                     input_bytes,
                     candidate_index,
                     slice::from_ref(inner.as_ref()),
@@ -95,7 +94,11 @@ fn match_tokens(
                     break;
                 }
                 match_count += 1;
-                positions.push(candidate_index);
+                positions.push(new_index);
+                if new_index == candidate_index {
+                    break; // Prevent infinite loop on empty matches
+                }
+                candidate_index = new_index;
             }
             if match_count < *min {
                 return Ok((false, index));
@@ -239,6 +242,21 @@ mod tests {
     #[test]
     fn end_anchor_can_match_empty_line() -> Result<()> {
         assert_match_pattern("", "$", true)
+    }
+
+    #[test]
+    fn start_anchor_with_star_quantifier() -> Result<()> {
+        assert_match_pattern("abc\n", "^*", true)
+    }
+
+    #[test]
+    fn start_anchor_with_plus_quantifier() -> Result<()> {
+        assert_match_pattern("abc", "^+", true)
+    }
+
+    #[test]
+    fn start_anchor_with_optional_quantifier() -> Result<()> {
+        assert_match_pattern("abc", "()*", true)
     }
 
     #[test]
