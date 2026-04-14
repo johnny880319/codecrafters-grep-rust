@@ -404,3 +404,64 @@ fn match_tokens(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{match_all_patterns, match_pattern, parse_pattern};
+    use anyhow::Result;
+
+    fn assert_match_pattern(input_line: &str, pattern: &str, expected: bool) -> Result<()> {
+        let tokens = parse_pattern(pattern)?;
+        let is_match = match_pattern(input_line, &tokens)?;
+        assert_eq!(is_match, expected);
+        Ok(())
+    }
+
+    fn assert_match_all_patterns(
+        input_line: &str,
+        pattern: &str,
+        expected: &[(usize, usize)],
+    ) -> Result<()> {
+        let tokens = parse_pattern(pattern)?;
+        let matched_idx = match_all_patterns(input_line, &tokens)?;
+        assert_eq!(matched_idx, expected);
+        Ok(())
+    }
+
+    #[test]
+    fn start_anchor_matches_start_of_line() -> Result<()> {
+        assert_match_pattern("abcdef", "^abc", true)
+    }
+
+    #[test]
+    fn end_anchor_matches_end_of_line() -> Result<()> {
+        assert_match_pattern("123abc", "abc$", true)
+    }
+
+    #[test]
+    fn end_anchor_can_match_empty_position_at_end_of_line() -> Result<()> {
+        assert_match_pattern("abc", "$", true)
+    }
+
+    #[test]
+    fn end_anchor_can_match_empty_line() -> Result<()> {
+        assert_match_pattern("", "$", true)
+    }
+
+    #[test]
+    fn match_all_patterns_returns_non_overlapping_matches() -> Result<()> {
+        assert_match_all_patterns("banana", "a", &[(1, 2), (3, 4), (5, 6)])
+    }
+
+    #[test]
+    #[ignore = "current implementation loops forever on zero-length matches"]
+    fn match_all_patterns_skips_empty_matches_for_star_quantifier() -> Result<()> {
+        assert_match_all_patterns("abc", "a*", &[(0, 1)])
+    }
+
+    #[test]
+    #[ignore = "current implementation loops forever on zero-length matches"]
+    fn match_all_patterns_skips_empty_matches_for_optional_quantifier() -> Result<()> {
+        assert_match_all_patterns("abc", "a?", &[(0, 1)])
+    }
+}
