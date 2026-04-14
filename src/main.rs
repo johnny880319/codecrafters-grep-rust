@@ -1,3 +1,4 @@
+use crate::pattern::PatternToken;
 use anyhow::Result;
 use std::{
     env, fs,
@@ -11,13 +12,14 @@ mod print_result;
 // Usage: echo <input_text> | your_program.sh -E <pattern>
 fn main() -> Result<()> {
     let grep_args = parse_args();
+    let pattern_tokens = pattern::parse_pattern(&grep_args.pattern_text)?;
 
     let mut is_any_match = false;
 
     if grep_args.file_paths.is_empty() {
         let mut input_string = String::new();
         io::stdin().read_to_string(&mut input_string).unwrap();
-        is_any_match |= match_content(&input_string, &grep_args, "stdin")?;
+        is_any_match |= match_content(&input_string, &pattern_tokens, &grep_args, "stdin")?;
     }
 
     for file_path in &grep_args.file_paths {
@@ -25,7 +27,7 @@ fn main() -> Result<()> {
             eprintln!("Error: Could not read file {file_path}");
             process::exit(1);
         });
-        is_any_match |= match_content(&file_content, &grep_args, file_path)?;
+        is_any_match |= match_content(&file_content, &pattern_tokens, &grep_args, file_path)?;
     }
     if !is_any_match {
         process::exit(1);
@@ -98,28 +100,32 @@ fn parse_args() -> GrepArgs {
     }
 }
 
-fn match_content(content: &str, grep_args: &GrepArgs, file_path: &str) -> Result<bool> {
-    let pattern_tokens = pattern::parse_pattern(&grep_args.pattern_text)?;
+fn match_content(
+    content: &str,
+    pattern_tokens: &[PatternToken],
+    grep_args: &GrepArgs,
+    file_path: &str,
+) -> Result<bool> {
     let mut is_any_match = false;
     for input_line in content.lines() {
         if grep_args.o_flag {
             is_any_match |= print_result::print_all_results(
                 input_line,
-                &pattern_tokens,
+                pattern_tokens,
                 file_path,
                 grep_args.print_file_name,
             )?;
         } else if grep_args.color_mode {
             is_any_match |= print_result::print_colored_results(
                 input_line,
-                &pattern_tokens,
+                pattern_tokens,
                 file_path,
                 grep_args.print_file_name,
             )?;
         } else {
             is_any_match |= print_result::print_result(
                 input_line,
-                &pattern_tokens,
+                pattern_tokens,
                 file_path,
                 grep_args.print_file_name,
             )?;
