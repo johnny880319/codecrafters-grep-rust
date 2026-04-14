@@ -1,5 +1,5 @@
 mod matcher;
 mod parser;
 
-pub use matcher::{CompiledPattern, match_all_patterns, match_pattern};
+pub use matcher::CompiledPattern;
 pub use parser::parse_pattern;
