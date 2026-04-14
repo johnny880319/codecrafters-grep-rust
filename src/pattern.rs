@@ -1,47 +1,8 @@
 use anyhow::Result;
 use std::slice;
 
-pub fn match_pattern(input_line: &str, pattern: &str) -> Result<bool> {
-    let pattern_tokens = parse_pattern(pattern)?;
-
-    for start in 0..input_line.len() {
-        let (is_match, _) = match_tokens(
-            input_line.as_bytes(),
-            start,
-            &pattern_tokens,
-            &mut Vec::new(),
-        )?;
-        if is_match {
-            return Ok(true);
-        }
-    }
-    Ok(false)
-}
-
-pub fn match_all_patterns(input_line: &str, pattern: &str) -> Result<Vec<(usize, usize)>> {
-    let pattern_tokens = parse_pattern(pattern)?;
-    let mut start = 0;
-    let mut matched_idx = Vec::new();
-
-    while start <= input_line.len() {
-        let (is_match, end) = match_tokens(
-            input_line.as_bytes(),
-            start,
-            &pattern_tokens,
-            &mut Vec::new(),
-        )?;
-        if is_match {
-            matched_idx.push((start, end));
-            start = end; // Move past the matched portion for the next search
-            continue;
-        }
-        start += 1;
-    }
-    Ok(matched_idx)
-}
-
 #[derive(Clone)]
-enum PatternToken {
+pub enum PatternToken {
     Literal(char),
     Digit,
     WordChar,
@@ -59,52 +20,7 @@ enum PatternToken {
     Backreference(usize),
 }
 
-impl PatternToken {
-    fn matches(&self, input_bytes: &[u8], index: usize) -> (bool, usize) {
-        match self {
-            Self::Literal(c) => Self::match_single_char(input_bytes, index, |b| b as char == *c),
-            Self::Digit => Self::match_single_char(input_bytes, index, |b| b.is_ascii_digit()),
-            Self::WordChar => Self::match_single_char(input_bytes, index, |b| {
-                b.is_ascii_alphanumeric() || b == b'_'
-            }),
-            Self::Wildcard => Self::match_single_char(input_bytes, index, |_| true),
-            Self::CharacterGroup(chars) => {
-                Self::match_single_char(input_bytes, index, |b| chars.contains(&(b as char)))
-            }
-            Self::NegatedCharacterGroup(chars) => {
-                Self::match_single_char(input_bytes, index, |b| !chars.contains(&(b as char)))
-            }
-            Self::StartAnchor => {
-                if index != 0 {
-                    return (false, index);
-                }
-                (true, index)
-            }
-            Self::EndAnchor => {
-                if index != input_bytes.len() {
-                    return (false, index);
-                }
-                (true, index)
-            }
-            Self::Quantifier { .. } | Self::Alternation(_) | Self::Backreference(_) => {
-                unreachable!("This should be handled in the recursive matching logic.")
-            }
-        }
-    }
-
-    fn match_single_char(
-        input_bytes: &[u8],
-        index: usize,
-        predicate: impl Fn(u8) -> bool,
-    ) -> (bool, usize) {
-        if index >= input_bytes.len() || !predicate(input_bytes[index]) {
-            return (false, index);
-        }
-        (true, index + 1)
-    }
-}
-
-fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
+pub fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
     let mut tokens = Vec::new();
     let mut i = 0;
     while i < pattern.len() {
@@ -202,6 +118,90 @@ fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
         }
     }
     Ok(tokens)
+}
+
+pub fn match_pattern(input_line: &str, pattern_tokens: &[PatternToken]) -> Result<bool> {
+    for start in 0..input_line.len() {
+        let (is_match, _) = match_tokens(
+            input_line.as_bytes(),
+            start,
+            pattern_tokens,
+            &mut Vec::new(),
+        )?;
+        if is_match {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+pub fn match_all_patterns(
+    input_line: &str,
+    pattern_tokens: &[PatternToken],
+) -> Result<Vec<(usize, usize)>> {
+    let mut start = 0;
+    let mut matched_idx = Vec::new();
+
+    while start <= input_line.len() {
+        let (is_match, end) = match_tokens(
+            input_line.as_bytes(),
+            start,
+            pattern_tokens,
+            &mut Vec::new(),
+        )?;
+        if is_match {
+            matched_idx.push((start, end));
+            start = end; // Move past the matched portion for the next search
+            continue;
+        }
+        start += 1;
+    }
+    Ok(matched_idx)
+}
+
+impl PatternToken {
+    fn matches(&self, input_bytes: &[u8], index: usize) -> (bool, usize) {
+        match self {
+            Self::Literal(c) => Self::match_single_char(input_bytes, index, |b| b as char == *c),
+            Self::Digit => Self::match_single_char(input_bytes, index, |b| b.is_ascii_digit()),
+            Self::WordChar => Self::match_single_char(input_bytes, index, |b| {
+                b.is_ascii_alphanumeric() || b == b'_'
+            }),
+            Self::Wildcard => Self::match_single_char(input_bytes, index, |_| true),
+            Self::CharacterGroup(chars) => {
+                Self::match_single_char(input_bytes, index, |b| chars.contains(&(b as char)))
+            }
+            Self::NegatedCharacterGroup(chars) => {
+                Self::match_single_char(input_bytes, index, |b| !chars.contains(&(b as char)))
+            }
+            Self::StartAnchor => {
+                if index != 0 {
+                    return (false, index);
+                }
+                (true, index)
+            }
+            Self::EndAnchor => {
+                if index != input_bytes.len() {
+                    return (false, index);
+                }
+                (true, index)
+            }
+            Self::Quantifier { .. } | Self::Alternation(_) | Self::Backreference(_) => {
+                unreachable!("This should be handled in the recursive matching logic.")
+            }
+        }
+    }
+
+    fn match_single_char(
+        input_bytes: &[u8],
+        index: usize,
+        predicate: impl Fn(u8) -> bool,
+    ) -> (bool, usize) {
+        if index >= input_bytes.len() || !predicate(input_bytes[index]) {
+            return (false, index);
+        }
+        (true, index + 1)
+    }
 }
 
 fn parse_number(pattern: &str, start: usize) -> Result<(usize, usize)> {

@@ -1,13 +1,14 @@
 use crate::pattern;
 use anyhow::Result;
+use pattern::PatternToken;
 
 pub fn print_result(
     input_line: &str,
-    pattern: &str,
+    pattern_tokens: &[PatternToken],
     file_path: &str,
     print_file_name: bool,
 ) -> Result<bool> {
-    let is_match = pattern::match_pattern(input_line, pattern)?;
+    let is_match = pattern::match_pattern(input_line, pattern_tokens)?;
     if !is_match {
         return Ok(false);
     }
@@ -19,11 +20,11 @@ pub fn print_result(
 
 pub fn print_all_results(
     input_line: &str,
-    pattern: &str,
+    pattern_tokens: &[PatternToken],
     file_path: &str,
     print_file_name: bool,
 ) -> Result<bool> {
-    let matched_idx = pattern::match_all_patterns(input_line, pattern)?;
+    let matched_idx = pattern::match_all_patterns(input_line, pattern_tokens)?;
     for (start, end) in &matched_idx {
         print_prefix(file_path, print_file_name);
         println!("{}", &input_line[*start..*end]);
@@ -33,11 +34,11 @@ pub fn print_all_results(
 
 pub fn print_colored_results(
     input_line: &str,
-    pattern: &str,
+    pattern_tokens: &[PatternToken],
     file_path: &str,
     print_file_name: bool,
 ) -> Result<bool> {
-    let matched_idx = pattern::match_all_patterns(input_line, pattern)?;
+    let matched_idx = pattern::match_all_patterns(input_line, pattern_tokens)?;
     if matched_idx.is_empty() {
         return Ok(false);
     }

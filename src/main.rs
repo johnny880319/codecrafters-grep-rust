@@ -99,26 +99,27 @@ fn parse_args() -> GrepArgs {
 }
 
 fn match_content(content: &str, grep_args: &GrepArgs, file_path: &str) -> Result<bool> {
+    let pattern_tokens = pattern::parse_pattern(&grep_args.pattern)?;
     let mut is_any_match = false;
     for input_line in content.lines() {
         if grep_args.o_flag {
             is_any_match |= print_result::print_all_results(
                 input_line,
-                &grep_args.pattern,
+                &pattern_tokens,
                 file_path,
                 grep_args.print_file_name,
             )?;
         } else if grep_args.color_mode {
             is_any_match |= print_result::print_colored_results(
                 input_line,
-                &grep_args.pattern,
+                &pattern_tokens,
                 file_path,
                 grep_args.print_file_name,
             )?;
         } else {
             is_any_match |= print_result::print_result(
                 input_line,
-                &grep_args.pattern,
+                &pattern_tokens,
                 file_path,
                 grep_args.print_file_name,
             )?;
