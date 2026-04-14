@@ -18,7 +18,7 @@ fn main() -> Result<()> {
 
     if grep_args.file_paths.is_empty() {
         let mut input_string = String::new();
-        io::stdin().read_to_string(&mut input_string).unwrap();
+        io::stdin().read_to_string(&mut input_string)?;
         is_any_match |= match_content(&input_string, &pattern_tokens, &grep_args, "stdin")?;
     }
 

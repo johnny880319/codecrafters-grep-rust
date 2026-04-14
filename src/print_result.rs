@@ -23,12 +23,12 @@ pub fn print_all_results(
     file_path: &str,
     print_file_name: bool,
 ) -> Result<bool> {
-    let pattern_matchs = pattern::match_all_patterns(input_line, pattern_tokens)?;
-    for (start, end) in &pattern_matchs.ranges {
+    let pattern_matches = pattern::match_all_patterns(input_line, pattern_tokens)?;
+    for (start, end) in &pattern_matches.ranges {
         print_prefix(file_path, print_file_name);
         println!("{}", &input_line[*start..*end]);
     }
-    Ok(pattern_matchs.has_match)
+    Ok(pattern_matches.has_match)
 }
 
 pub fn print_colored_results(
@@ -37,13 +37,13 @@ pub fn print_colored_results(
     file_path: &str,
     print_file_name: bool,
 ) -> Result<bool> {
-    let pattern_matchs = pattern::match_all_patterns(input_line, pattern_tokens)?;
-    if !pattern_matchs.has_match {
+    let pattern_matches = pattern::match_all_patterns(input_line, pattern_tokens)?;
+    if !pattern_matches.has_match {
         return Ok(false);
     }
     let mut last_end = 0;
     print_prefix(file_path, print_file_name);
-    for (start, end) in &pattern_matchs.ranges {
+    for (start, end) in &pattern_matches.ranges {
         print!("{}", &input_line[last_end..*start]);
         print!("\x1b[01;31m{}\x1b[m", &input_line[*start..*end]);
         last_end = *end;

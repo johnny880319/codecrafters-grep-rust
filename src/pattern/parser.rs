@@ -8,26 +8,9 @@ pub fn parse_pattern(pattern_text: &str) -> Result<Vec<PatternToken>> {
         let c = pattern_text.as_bytes()[i] as char;
         match c {
             '\\' => {
-                if i + 1 >= pattern_text.len() {
-                    return Err(anyhow::anyhow!("Pattern ends with a single backslash"));
-                }
-                let next_char = pattern_text.as_bytes()[i + 1] as char;
-                match next_char {
-                    'd' => {
-                        tokens.push(PatternToken::Digit);
-                        i += 2;
-                    }
-                    'w' => {
-                        tokens.push(PatternToken::WordChar);
-                        i += 2;
-                    }
-                    '1'..='9' => {
-                        let backref_num;
-                        (backref_num, i) = parse_number(pattern_text, i + 1)?;
-                        tokens.push(PatternToken::Backreference(backref_num));
-                    }
-                    _ => return Err(anyhow::anyhow!("Unknown escape sequence: \\{}", next_char)),
-                }
+                let new_token;
+                (new_token, i) = parse_escape_sequence(pattern_text, i)?;
+                tokens.push(new_token);
             }
             '.' => {
                 tokens.push(PatternToken::Wildcard);
@@ -53,7 +36,12 @@ pub fn parse_pattern(pattern_text: &str) -> Result<Vec<PatternToken>> {
                         c
                     ));
                 }
-                let prev_token = tokens.pop().unwrap();
+                let prev_token = tokens.pop().ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "Quantifier '{}' cannot be the first token in the pattern",
+                        c
+                    )
+                })?;
                 let new_token = match c {
                     '+' => PatternToken::Quantifier {
                         min: 1,
@@ -78,11 +66,12 @@ pub fn parse_pattern(pattern_text: &str) -> Result<Vec<PatternToken>> {
             '{' => {
                 if tokens.is_empty() {
                     return Err(anyhow::anyhow!(
-                        "Quantifier '{}' cannot be the first token in the pattern",
-                        c
+                        "Quantifier '{c}' cannot be the first token in the pattern"
                     ));
                 }
-                let prev_token = tokens.pop().unwrap();
+                let prev_token = tokens.pop().ok_or_else(|| {
+                    anyhow::anyhow!("Quantifier '{c}' cannot be the first token in the pattern")
+                })?;
                 let new_token;
                 (new_token, i) = parse_quantifier(pattern_text, i + 1, prev_token)?;
                 tokens.push(new_token);
@@ -99,6 +88,22 @@ pub fn parse_pattern(pattern_text: &str) -> Result<Vec<PatternToken>> {
         }
     }
     Ok(tokens)
+}
+
+fn parse_escape_sequence(pattern_text: &str, start: usize) -> Result<(PatternToken, usize)> {
+    if start + 1 >= pattern_text.len() {
+        return Err(anyhow::anyhow!("Pattern ends with a single backslash"));
+    }
+    let next_char = pattern_text.as_bytes()[start + 1] as char;
+    match next_char {
+        'd' => Ok((PatternToken::Digit, start + 2)),
+        'w' => Ok((PatternToken::WordChar, start + 2)),
+        '1'..='9' => {
+            let (backref_num, end) = parse_number(pattern_text, start + 1)?;
+            Ok((PatternToken::Backreference(backref_num), end))
+        }
+        _ => Err(anyhow::anyhow!("Unknown escape sequence: \\{next_char}")),
+    }
 }
 
 fn parse_number(pattern_text: &str, start: usize) -> Result<(usize, usize)> {

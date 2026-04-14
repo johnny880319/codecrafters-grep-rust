@@ -215,9 +215,9 @@ mod tests {
         expected_idx: &[(usize, usize)],
     ) -> Result<()> {
         let tokens = pattern::parse_pattern(pattern_text)?;
-        let pattern_matchs = match_all_patterns(input_line, &tokens)?;
-        assert_eq!(pattern_matchs.has_match, expect_match);
-        assert_eq!(pattern_matchs.ranges, expected_idx);
+        let pattern_matches = match_all_patterns(input_line, &tokens)?;
+        assert_eq!(pattern_matches.has_match, expect_match);
+        assert_eq!(pattern_matches.ranges, expected_idx);
         Ok(())
     }
 
