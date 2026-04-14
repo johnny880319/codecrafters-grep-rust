@@ -198,11 +198,11 @@ impl PatternToken {
 #[cfg(test)]
 mod tests {
     use super::{match_all_patterns, match_pattern};
-    use crate::pattern::parser;
+    use crate::pattern;
     use anyhow::Result;
 
-    fn assert_match_pattern(input_line: &str, pattern: &str, expected: bool) -> Result<()> {
-        let tokens = parser::parse_pattern(pattern)?;
+    fn assert_match_pattern(input_line: &str, pattern_text: &str, expected: bool) -> Result<()> {
+        let tokens = pattern::parse_pattern(pattern_text)?;
         let is_match = match_pattern(input_line, &tokens)?;
         assert_eq!(is_match, expected);
         Ok(())
@@ -210,11 +210,11 @@ mod tests {
 
     fn assert_match_all_patterns(
         input_line: &str,
-        pattern: &str,
+        pattern_text: &str,
         expect_match: bool,
         expected_idx: &[(usize, usize)],
     ) -> Result<()> {
-        let tokens = parser::parse_pattern(pattern)?;
+        let tokens = pattern::parse_pattern(pattern_text)?;
         let pattern_matchs = match_all_patterns(input_line, &tokens)?;
         assert_eq!(pattern_matchs.has_match, expect_match);
         assert_eq!(pattern_matchs.ranges, expected_idx);

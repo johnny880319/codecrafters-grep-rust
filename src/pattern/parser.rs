@@ -1,4 +1,4 @@
-use crate::pattern::matcher::PatternToken;
+use super::matcher::PatternToken;
 use anyhow::Result;
 
 pub fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
