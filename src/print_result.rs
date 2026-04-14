@@ -1,6 +1,6 @@
 use crate::pattern;
 use anyhow::Result;
-use pattern::PatternToken;
+use pattern::matcher::{self, PatternToken};
 
 pub fn print_result(
     input_line: &str,
@@ -8,7 +8,7 @@ pub fn print_result(
     file_path: &str,
     print_file_name: bool,
 ) -> Result<bool> {
-    let is_match = pattern::match_pattern(input_line, pattern_tokens)?;
+    let is_match = matcher::match_pattern(input_line, pattern_tokens)?;
     if !is_match {
         return Ok(false);
     }
@@ -24,7 +24,7 @@ pub fn print_all_results(
     file_path: &str,
     print_file_name: bool,
 ) -> Result<bool> {
-    let pattern_matchs = pattern::match_all_patterns(input_line, pattern_tokens)?;
+    let pattern_matchs = matcher::match_all_patterns(input_line, pattern_tokens)?;
     for (start, end) in &pattern_matchs.matched_idx {
         print_prefix(file_path, print_file_name);
         println!("{}", &input_line[*start..*end]);
@@ -38,7 +38,7 @@ pub fn print_colored_results(
     file_path: &str,
     print_file_name: bool,
 ) -> Result<bool> {
-    let pattern_matchs = pattern::match_all_patterns(input_line, pattern_tokens)?;
+    let pattern_matchs = matcher::match_all_patterns(input_line, pattern_tokens)?;
     if !pattern_matchs.is_match {
         return Ok(false);
     }
