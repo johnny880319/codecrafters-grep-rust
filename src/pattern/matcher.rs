@@ -260,6 +260,11 @@ mod tests {
     }
 
     #[test]
+    fn quantifier_with_range() -> Result<()> {
+        assert_match_pattern("cabbageee_soup", "cabbage{2,4}_soup", true)
+    }
+
+    #[test]
     fn match_all_patterns_returns_non_overlapping_matches() -> Result<()> {
         assert_match_all_patterns("banana", "a", true, &[(1, 2), (3, 4), (5, 6)])
     }

@@ -29,7 +29,7 @@ pub fn parse_pattern(pattern_text: &str) -> Result<Vec<PatternToken>> {
                 tokens.push(PatternToken::EndAnchor);
                 i += 1;
             }
-            '+' | '*' | '?' => {
+            '+' | '*' | '?' | '{' => {
                 let prev_token = pop_previous_token(&mut tokens)?;
                 let (new_token, new_i) = parse_quantifier(pattern_text, i, prev_token)?;
                 tokens.push(new_token);
