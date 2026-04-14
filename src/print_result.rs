@@ -1,13 +1,13 @@
-use crate::pattern::{self, PatternToken};
+use crate::pattern::{self, CompiledPattern};
 use anyhow::Result;
 
 pub fn print_result(
     input_line: &str,
-    pattern_tokens: &[PatternToken],
+    compiled_pattern: &CompiledPattern,
     file_path: &str,
     print_file_name: bool,
 ) -> Result<bool> {
-    let is_match = pattern::match_pattern(input_line, pattern_tokens)?;
+    let is_match = pattern::match_pattern(input_line, &compiled_pattern.tokens)?;
     if !is_match {
         return Ok(false);
     }
@@ -19,11 +19,11 @@ pub fn print_result(
 
 pub fn print_all_results(
     input_line: &str,
-    pattern_tokens: &[PatternToken],
+    compiled_pattern: &CompiledPattern,
     file_path: &str,
     print_file_name: bool,
 ) -> Result<bool> {
-    let pattern_matches = pattern::match_all_patterns(input_line, pattern_tokens)?;
+    let pattern_matches = pattern::match_all_patterns(input_line, &compiled_pattern.tokens)?;
     for (start, end) in &pattern_matches.ranges {
         print_prefix(file_path, print_file_name);
         println!("{}", &input_line[*start..*end]);
@@ -33,11 +33,11 @@ pub fn print_all_results(
 
 pub fn print_colored_results(
     input_line: &str,
-    pattern_tokens: &[PatternToken],
+    compiled_pattern: &CompiledPattern,
     file_path: &str,
     print_file_name: bool,
 ) -> Result<bool> {
-    let pattern_matches = pattern::match_all_patterns(input_line, pattern_tokens)?;
+    let pattern_matches = pattern::match_all_patterns(input_line, &compiled_pattern.tokens)?;
     if !pattern_matches.has_match {
         return Ok(false);
     }

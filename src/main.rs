@@ -1,4 +1,4 @@
-use crate::pattern::PatternToken;
+use crate::pattern::CompiledPattern;
 use anyhow::Result;
 use std::{
     env, fs,
@@ -102,7 +102,7 @@ fn parse_args() -> GrepArgs {
 
 fn match_content(
     content: &str,
-    pattern_tokens: &[PatternToken],
+    compiled_pattern: &CompiledPattern,
     grep_args: &GrepArgs,
     file_path: &str,
 ) -> Result<bool> {
@@ -111,21 +111,21 @@ fn match_content(
         if grep_args.o_flag {
             is_any_match |= print_result::print_all_results(
                 input_line,
-                pattern_tokens,
+                compiled_pattern,
                 file_path,
                 grep_args.print_file_name,
             )?;
         } else if grep_args.color_mode {
             is_any_match |= print_result::print_colored_results(
                 input_line,
-                pattern_tokens,
+                compiled_pattern,
                 file_path,
                 grep_args.print_file_name,
             )?;
         } else {
             is_any_match |= print_result::print_result(
                 input_line,
-                pattern_tokens,
+                compiled_pattern,
                 file_path,
                 grep_args.print_file_name,
             )?;

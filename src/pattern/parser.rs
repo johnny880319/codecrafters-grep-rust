@@ -1,7 +1,7 @@
-use super::matcher::PatternToken;
+use super::matcher::{CompiledPattern, PatternToken};
 use anyhow::Result;
 
-pub fn parse_pattern(pattern_text: &str) -> Result<Vec<PatternToken>> {
+pub fn parse_pattern(pattern_text: &str) -> Result<CompiledPattern> {
     let mut tokens = Vec::new();
     let mut i = 0;
     while i < pattern_text.len() {
@@ -46,7 +46,7 @@ pub fn parse_pattern(pattern_text: &str) -> Result<Vec<PatternToken>> {
             }
         }
     }
-    Ok(tokens)
+    Ok(CompiledPattern { tokens })
 }
 
 fn parse_escape_sequence(pattern_text: &str, start: usize) -> Result<(PatternToken, usize)> {
@@ -204,13 +204,13 @@ fn parse_alternation(pattern_text: &str, mut start: usize) -> Result<(PatternTok
                 depth += 1;
             }
             '|' if depth == 1 => {
-                alternatives.push(parse_pattern(&pattern_text[start..end])?);
+                alternatives.push(parse_pattern(&pattern_text[start..end])?.tokens);
                 start = end + 1;
             }
             ')' => {
                 depth -= 1;
                 if depth == 0 {
-                    alternatives.push(parse_pattern(&pattern_text[start..end])?);
+                    alternatives.push(parse_pattern(&pattern_text[start..end])?.tokens);
                     break;
                 }
             }
