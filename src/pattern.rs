@@ -121,7 +121,7 @@ pub fn parse_pattern(pattern: &str) -> Result<Vec<PatternToken>> {
 }
 
 pub fn match_pattern(input_line: &str, pattern_tokens: &[PatternToken]) -> Result<bool> {
-    for start in 0..input_line.len() {
+    for start in 0..=input_line.len() {
         let (is_match, _) = match_tokens(
             input_line.as_bytes(),
             start,
