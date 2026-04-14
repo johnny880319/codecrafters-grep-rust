@@ -39,13 +39,13 @@ struct GrepArgs {
     pattern_text: String,
     file_paths: Vec<String>,
     print_file_name: bool,
-    o_flag: bool,
+    only_matching: bool,
     color_mode: bool,
 }
 
 fn parse_args() -> GrepArgs {
     let env_args: Vec<String> = env::args().collect();
-    let o_flag = env_args.iter().any(|arg| arg == "-o");
+    let only_matching = env_args.iter().any(|arg| arg == "-o");
 
     let is_color_always = env_args.iter().any(|arg| arg == "--color=always");
     let is_color_auto = env_args.iter().any(|arg| arg == "--color=auto");
@@ -95,7 +95,7 @@ fn parse_args() -> GrepArgs {
         pattern_text,
         file_paths,
         print_file_name,
-        o_flag,
+        only_matching,
         color_mode,
     }
 }
@@ -108,7 +108,7 @@ fn match_content(
 ) -> Result<bool> {
     let mut is_any_match = false;
     for input_line in content.lines() {
-        if grep_args.o_flag {
+        if grep_args.only_matching {
             is_any_match |= print_result::print_all_results(
                 input_line,
                 compiled_pattern,
