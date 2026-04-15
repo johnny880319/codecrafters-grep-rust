@@ -1,7 +1,7 @@
 use crate::pattern::CompiledPattern;
 use anyhow::Result;
 
-pub fn print_result(
+pub fn print_matching_line(
     input_line: &str,
     compiled_pattern: &CompiledPattern,
     file_path: &str,
@@ -17,7 +17,7 @@ pub fn print_result(
     Ok(true)
 }
 
-pub fn print_colored_results(
+pub fn print_colored_line(
     input_line: &str,
     compiled_pattern: &CompiledPattern,
     file_path: &str,
@@ -38,7 +38,7 @@ pub fn print_colored_results(
     Ok(true)
 }
 
-pub fn print_all_results(
+pub fn print_matching_ranges(
     input_line: &str,
     compiled_pattern: &CompiledPattern,
     file_path: &str,

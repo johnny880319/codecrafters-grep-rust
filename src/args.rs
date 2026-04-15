@@ -1,7 +1,7 @@
+use anyhow::Result;
 use std::{
     env, fs,
     io::{self, IsTerminal},
-    process,
 };
 use walkdir::WalkDir;
 
@@ -13,7 +13,7 @@ pub struct GrepArgs {
     pub color_mode: bool,
 }
 
-pub fn parse_args() -> GrepArgs {
+pub fn parse_args() -> Result<GrepArgs> {
     let env_args: Vec<String> = env::args().collect();
     let only_matching = env_args.iter().any(|arg| arg == "-o");
 
@@ -27,10 +27,7 @@ pub fn parse_args() -> GrepArgs {
         .skip(1)
         .find(|arg| !arg.starts_with('-'))
         .cloned()
-        .unwrap_or_else(|| {
-            eprintln!("Error: No pattern provided");
-            process::exit(1);
-        });
+        .ok_or_else(|| anyhow::anyhow!("No pattern provided"))?;
 
     // Second argument that is not a flag is file or directory path
     let file_or_dir_paths = env_args
@@ -61,11 +58,11 @@ pub fn parse_args() -> GrepArgs {
         file_or_dir_paths.into_iter().cloned().collect()
     };
 
-    GrepArgs {
+    Ok(GrepArgs {
         pattern_text,
         file_paths,
         print_file_name,
         only_matching,
         color_mode,
-    }
+    })
 }

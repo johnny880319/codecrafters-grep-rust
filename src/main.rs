@@ -13,7 +13,7 @@ mod pattern;
 
 // Usage: echo <input_text> | your_program.sh -E <pattern>
 fn main() -> Result<ExitCode> {
-    let grep_args = args::parse_args();
+    let grep_args = args::parse_args()?;
     let compiled_pattern = CompiledPattern::parse(&grep_args.pattern_text)?;
 
     let mut is_any_match = false;
@@ -42,28 +42,32 @@ fn match_content(
 ) -> Result<bool> {
     let mut is_any_match = false;
     for input_line in content.lines() {
-        if grep_args.only_matching {
-            is_any_match |= output::print_all_results(
-                input_line,
-                compiled_pattern,
-                file_path,
-                grep_args.print_file_name,
-                grep_args.color_mode,
-            )?;
-        } else if grep_args.color_mode {
-            is_any_match |= output::print_colored_results(
-                input_line,
-                compiled_pattern,
-                file_path,
-                grep_args.print_file_name,
-            )?;
-        } else {
-            is_any_match |= output::print_result(
-                input_line,
-                compiled_pattern,
-                file_path,
-                grep_args.print_file_name,
-            )?;
+        match (grep_args.only_matching, grep_args.color_mode) {
+            (true, _) => {
+                is_any_match |= output::print_matching_ranges(
+                    input_line,
+                    compiled_pattern,
+                    file_path,
+                    grep_args.print_file_name,
+                    grep_args.color_mode,
+                )?;
+            }
+            (false, true) => {
+                is_any_match |= output::print_colored_line(
+                    input_line,
+                    compiled_pattern,
+                    file_path,
+                    grep_args.print_file_name,
+                )?;
+            }
+            (false, false) => {
+                is_any_match |= output::print_matching_line(
+                    input_line,
+                    compiled_pattern,
+                    file_path,
+                    grep_args.print_file_name,
+                )?;
+            }
         }
     }
     Ok(is_any_match)
