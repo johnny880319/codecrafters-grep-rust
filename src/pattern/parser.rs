@@ -2,7 +2,7 @@ use super::matcher::{CompiledPattern, PatternToken};
 use anyhow::Result;
 
 impl CompiledPattern {
-    pub fn parse_pattern(pattern_text: &str) -> Result<Self> {
+    pub fn parse(pattern_text: &str) -> Result<Self> {
         let mut tokens = Vec::new();
         let mut i = 0;
         while i < pattern_text.len() {
@@ -206,15 +206,13 @@ fn parse_alternation(pattern_text: &str, mut start: usize) -> Result<(PatternTok
                 depth += 1;
             }
             '|' if depth == 1 => {
-                alternatives
-                    .push(CompiledPattern::parse_pattern(&pattern_text[start..end])?.tokens);
+                alternatives.push(CompiledPattern::parse(&pattern_text[start..end])?.tokens);
                 start = end + 1;
             }
             ')' => {
                 depth -= 1;
                 if depth == 0 {
-                    alternatives
-                        .push(CompiledPattern::parse_pattern(&pattern_text[start..end])?.tokens);
+                    alternatives.push(CompiledPattern::parse(&pattern_text[start..end])?.tokens);
                     break;
                 }
             }

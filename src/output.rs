@@ -31,7 +31,7 @@ pub fn print_colored_results(
     print_prefix(file_path, print_file_name);
     for (start, end) in &pattern_matches.ranges {
         print!("{}", &input_line[last_end..*start]);
-        print!("\x1b[01;31m{}\x1b[m", &input_line[*start..*end]);
+        print_colored_match(&input_line[*start..*end]);
         last_end = *end;
     }
     println!("{}", &input_line[last_end..]);
@@ -49,7 +49,8 @@ pub fn print_all_results(
     for (start, end) in &pattern_matches.ranges {
         print_prefix(file_path, print_file_name);
         if color_mode {
-            println!("\x1b[01;31m{}\x1b[m", &input_line[*start..*end]);
+            print_colored_match(&input_line[*start..*end]);
+            println!();
         } else {
             println!("{}", &input_line[*start..*end]);
         }
@@ -61,4 +62,8 @@ fn print_prefix(file_path: &str, print_file_name: bool) {
     if print_file_name {
         print!("{file_path}:");
     }
+}
+
+fn print_colored_match(text: &str) {
+    print!("\x1b[01;31m{text}\x1b[m");
 }

@@ -2,11 +2,11 @@ use anyhow::Result;
 use std::slice;
 
 pub struct CompiledPattern {
-    pub tokens: Vec<PatternToken>,
+    pub(super) tokens: Vec<PatternToken>,
 }
 
 #[derive(Clone)]
-pub enum PatternToken {
+pub(super) enum PatternToken {
     Literal(char),
     Digit,
     WordChar,
@@ -199,7 +199,7 @@ mod tests {
     use anyhow::Result;
 
     fn assert_match_pattern(input_line: &str, pattern_text: &str, expected: bool) -> Result<()> {
-        let compiled_pattern = CompiledPattern::parse_pattern(pattern_text)?;
+        let compiled_pattern = CompiledPattern::parse(pattern_text)?;
         let is_match = compiled_pattern.match_pattern(input_line)?;
         assert_eq!(is_match, expected);
         Ok(())
@@ -211,7 +211,7 @@ mod tests {
         expect_match: bool,
         expected_idx: &[(usize, usize)],
     ) -> Result<()> {
-        let compiled_pattern = CompiledPattern::parse_pattern(pattern_text)?;
+        let compiled_pattern = CompiledPattern::parse(pattern_text)?;
         let pattern_matches = compiled_pattern.match_all_patterns(input_line)?;
         assert_eq!(pattern_matches.has_match, expect_match);
         assert_eq!(pattern_matches.ranges, expected_idx);
