@@ -20,7 +20,9 @@ pub(super) enum PatternToken {
         max: usize,
         inner: Box<Self>,
     },
-    Alternation(Vec<Vec<Self>>),
+    CaptureGroup {
+        alternatives: Vec<Vec<Self>>,
+    },
     Backreference(usize),
 }
 
@@ -107,7 +109,7 @@ fn match_tokens(
             }
             Ok((false, index))
         }
-        PatternToken::Alternation(alternatives) => {
+        PatternToken::CaptureGroup { alternatives } => {
             for alt_tokens in alternatives {
                 let prev_len = captures.len();
                 let mut combined_tokens = alt_tokens.clone();
@@ -175,7 +177,7 @@ impl PatternToken {
                 }
                 (true, index)
             }
-            Self::Quantifier { .. } | Self::Alternation(_) | Self::Backreference(_) => {
+            Self::Quantifier { .. } | Self::CaptureGroup { .. } | Self::Backreference(_) => {
                 unreachable!("This should be handled in the recursive matching logic.")
             }
         }
@@ -249,7 +251,7 @@ mod tests {
     }
 
     #[test]
-    fn start_anchor_with_optional_quantifier() -> Result<()> {
+    fn empty_group_with_star_quantifier() -> Result<()> {
         assert_match_pattern("abc", "()*", true)
     }
 

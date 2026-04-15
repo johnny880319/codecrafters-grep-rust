@@ -38,7 +38,7 @@ impl CompiledPattern {
                 }
                 '(' => {
                     let new_token;
-                    (new_token, i) = parse_alternation(pattern_text, i + 1)?;
+                    (new_token, i) = parse_capture_group(pattern_text, i + 1)?;
                     tokens.push(new_token);
                 }
                 _ => {
@@ -196,7 +196,7 @@ fn parse_range_quantifier(
     }
 }
 
-fn parse_alternation(pattern_text: &str, mut start: usize) -> Result<(PatternToken, usize)> {
+fn parse_capture_group(pattern_text: &str, mut start: usize) -> Result<(PatternToken, usize)> {
     let mut depth = 1;
     let mut end = start;
     let mut alternatives = Vec::new();
@@ -223,5 +223,5 @@ fn parse_alternation(pattern_text: &str, mut start: usize) -> Result<(PatternTok
     if depth != 0 {
         return Err(anyhow::anyhow!("Unmatched ( in pattern"));
     }
-    Ok((PatternToken::Alternation(alternatives), end + 1))
+    Ok((PatternToken::CaptureGroup { alternatives }, end + 1))
 }
