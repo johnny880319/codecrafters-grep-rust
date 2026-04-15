@@ -114,6 +114,7 @@ fn match_content(
                 compiled_pattern,
                 file_path,
                 grep_args.print_file_name,
+                grep_args.color_mode,
             )?;
         } else if grep_args.color_mode {
             is_any_match |= print_result::print_colored_results(
