@@ -16,6 +16,4 @@ nursery = "deny"
 
 [dependencies]
 anyhow = "1.0.68"                                # error handling
-bytes = "1.3.0"                                  # helps manage buffers
-thiserror = "1.0.38"                             # error handling
 walkdir = "2.5.0"
