@@ -4,7 +4,7 @@ use anyhow::Result;
 use std::{
     fs,
     io::{self, Read},
-    process,
+    process::ExitCode,
 };
 
 mod args;
@@ -12,7 +12,7 @@ mod output;
 mod pattern;
 
 // Usage: echo <input_text> | your_program.sh -E <pattern>
-fn main() -> Result<()> {
+fn main() -> Result<ExitCode> {
     let grep_args = args::parse_args();
     let compiled_pattern = CompiledPattern::parse(&grep_args.pattern_text)?;
 
@@ -25,16 +25,13 @@ fn main() -> Result<()> {
     }
 
     for file_path in &grep_args.file_paths {
-        let file_content = fs::read_to_string(file_path).unwrap_or_else(|_| {
-            eprintln!("Error: Could not read file {file_path}");
-            process::exit(1);
-        });
+        let file_content = fs::read_to_string(file_path)?;
         is_any_match |= match_content(&file_content, &compiled_pattern, &grep_args, file_path)?;
     }
     if !is_any_match {
-        process::exit(1);
+        return Ok(ExitCode::FAILURE);
     }
-    process::exit(0)
+    Ok(ExitCode::SUCCESS)
 }
 
 fn match_content(
